@@ -441,13 +441,13 @@ std::string input(std::string const& prompt, std::string const& type, ThemeName 
 // Helper for pick() - must be outside to be accessible by capture-less lambdas
 static std::vector<std::string> const* pick_options_ptr = nullptr;
 
-static void pick_info_fn(::jlist* /* l */, int /* i */, ::jlist_item_info* info) {
+static void pick_info_fn(jlist* /* l */, int /* i */, jlist_item_info* info) {
     info->selectable = true;
     info->triggerable = true;
     info->natural_height = 20;
 }
 
-static void pick_paint_fn(int x, int y, int /* w */, int /* h */, ::jlist* /* l */, int i, bool sel) {
+static void pick_paint_fn(int x, int y, int /* w */, int /* h */, jlist* /* l */, int i, bool sel) {
     if (pick_options_ptr && i >= 0 && i < (int)pick_options_ptr->size()) {
         dtext(x + 5, y + 2, sel ? C_WHITE : C_BLACK, (*pick_options_ptr)[i].c_str());
     }

@@ -278,7 +278,7 @@ void Editor::draw_line(int x, int y, int line_idx, std::string const& line) {
     for (auto const& tok : tokens) {
         dtext(cur_x, y, tok.color, tok.text.c_str());
         int w, h;
-        dsize(tok.text.c_str(), dfont_default(), &w, &h);
+        dtext_size(tok.text.c_str(), dfont_default(), &w, &h);
         cur_x += w;
     }
 }
@@ -294,7 +294,7 @@ void Editor::render() {
         draw_line(5, y, i, line);
         if (i == cy) {
             int cw, ch;
-            dnsize(line.c_str(), cx, dfont_default(), &cw, &ch);
+            dtext_nsize(line.c_str(), cx, dfont_default(), &cw, &ch);
             drect(5 + cw, y, 5 + cw + 1, y + 18, t.txt);
         }
         y += 20;

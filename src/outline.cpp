@@ -40,18 +40,18 @@ int show_outline(std::string const& filename, ncinput::ThemeName theme_name) {
     jwidget* result_view = jwidget_create((jwidget*)body);
     jlayout_set_vbox((jwidget*)result_view);
 
-    static auto info_fn = [](struct ::jlist*, int, struct ::jlist_item_info* info) {
+    auto info_fn = [](::jlist*, int, ::jlist_item_info* info) {
         info->selectable = true;
         info->triggerable = true;
         info->natural_height = 20;
     };
-    static auto paint_fn = [](int x, int y, int, int, struct ::jlist*, int i, bool sel) {
+    auto paint_fn = [](int x, int y, int, int, ::jlist*, int i, bool sel) {
         if (i >= 0 && i < (int)outline_display_names.size()) {
             dtext(x + 5, y + 2, sel ? C_WHITE : C_BLACK, outline_display_names[i].c_str());
         }
     };
 
-    jscrolledlist* sl = (jscrolledlist*)jscrolledlist_create((jlist_item_info_function)info_fn, (jlist_item_paint_function)paint_fn, (jwidget*)result_view);
+    jscrolledlist* sl = (jscrolledlist*)jscrolledlist_create((jlist_item_info_function)+info_fn, (jlist_item_paint_function)+paint_fn, (jwidget*)result_view);
     jwidget_set_stretch((jwidget*)sl, 1, 1, false);
 
     jwidget_set_visible(result_view, false);
