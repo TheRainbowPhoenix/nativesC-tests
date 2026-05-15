@@ -10,9 +10,11 @@
 
 namespace ced {
 
+static std::vector<std::string> outline_display_names;
+
 int show_outline(std::string const& filename, ncinput::ThemeName theme_name) {
     auto const& t = ncinput::get_theme(theme_name);
-    jscene* scene = jscene_create_fullscreen(nullptr);
+    jscene* scene = (jscene*)jscene_create_fullscreen(nullptr);
     jlayout_set_vbox((jwidget*)scene)->spacing = 0;
     jwidget_set_background((jwidget*)scene, t.modal_bg);
 
@@ -37,8 +39,20 @@ int show_outline(std::string const& filename, ncinput::ThemeName theme_name) {
 
     jwidget* result_view = jwidget_create((jwidget*)body);
     jlayout_set_vbox(result_view);
-    jscrolledlist* sl = jscrolledlist_create((jwidget*)result_view);
-    jwidget_set_stretch(sl, 1, 1, false);
+
+    auto info_fn = [](struct jlist* /* l */, int /* i */, jlist_item_info* info) {
+        info->selectable = true;
+        info->triggerable = true;
+        info->natural_height = 20;
+    };
+    auto paint_fn = [](int x, int y, int /* w */, int /* h */, struct jlist* /* l */, int i, bool sel) {
+        if (i >= 0 && i < (int)outline_display_names.size()) {
+            dtext(x + 5, y + 2, sel ? C_WHITE : C_BLACK, outline_display_names[i].c_str());
+        }
+    };
+
+    jscrolledlist* sl = (jscrolledlist*)jscrolledlist_create(info_fn, paint_fn, (jwidget*)result_view);
+    jwidget_set_stretch((jwidget*)sl, 1, 1, false);
 
     jwidget_set_visible(result_view, false);
 
@@ -61,6 +75,7 @@ int show_outline(std::string const& filename, ncinput::ThemeName theme_name) {
         if (analyzing) {
             // Cooperative multitasking to simulate background threading
             std::string line;
+            bool model_updated = false;
             for (int i = 0; i < 10 && std::getline(analyzer_f, line); ++i) {
                 size_t first = line.find_first_not_of(" \t");
                 if (first != std::string::npos) {
@@ -69,10 +84,14 @@ int show_outline(std::string const& filename, ncinput::ThemeName theme_name) {
                         std::string indent_str(first, ' ');
                         std::string display_name = indent_str + (trimmed.compare(0, 6, "class ") == 0 ? "◈ " : "○ ") + trimmed;
                         items.push_back({trimmed, analyzer_line_idx, (int)first});
-                        jscrolledlist_add_item(sl, display_name.c_str());
+                        outline_display_names.push_back(display_name);
+                        model_updated = true;
                     }
                 }
                 analyzer_line_idx++;
+            }
+            if (model_updated) {
+                jlist_update_model(sl->list, items.size(), nullptr);
             }
             if (analyzer_f.eof()) {
                 analyzing = false;
@@ -99,9 +118,10 @@ int show_outline(std::string const& filename, ncinput::ThemeName theme_name) {
             analyzer_line_idx = 0;
             analyzing = true;
             items.clear();
-            jscrolledlist_clear(sl);
-        } else if (e.type == JSCROLLEDLIST_ITEM_TRIGGERED) {
-            int idx = jscrolledlist_get_selected_index(sl);
+            outline_display_names.clear();
+            jlist_clear(sl->list);
+        } else if (e.type == JLIST_ITEM_TRIGGERED) {
+            int idx = jlist_selected_item(sl->list);
             if (idx >= 0 && idx < (int)items.size()) {
                 result_line = items[idx].line;
                 running = false;
@@ -112,6 +132,7 @@ int show_outline(std::string const& filename, ncinput::ThemeName theme_name) {
     }
 
     jwidget_destroy((jwidget*)scene);
+    outline_display_names.clear();
     return result_line;
 }
 
