@@ -441,13 +441,13 @@ std::string input(std::string const& prompt, std::string const& type, ThemeName 
 // Helper for pick() - must be outside to be accessible by capture-less lambdas
 static std::vector<std::string> const* pick_options_ptr = nullptr;
 
-static void pick_info_fn(jlist* /* l */, int /* i */, jlist_item_info* info) {
+static void pick_info_fn(::jlist* /* l */, int /* i */, ::jlist_item_info* info) {
     info->selectable = true;
     info->triggerable = true;
     info->natural_height = 20;
 }
 
-static void pick_paint_fn(int x, int y, int /* w */, int /* h */, jlist* /* l */, int i, bool sel) {
+static void pick_paint_fn(int x, int y, int /* w */, int /* h */, ::jlist* /* l */, int i, bool sel) {
     if (pick_options_ptr && i >= 0 && i < (int)pick_options_ptr->size()) {
         dtext(x + 5, y + 2, sel ? C_WHITE : C_BLACK, (*pick_options_ptr)[i].c_str());
     }
@@ -471,8 +471,8 @@ std::string pick(std::vector<std::string> const& options, std::string const& pro
     // Implementation for pick using jscrolledlist
     pick_options_ptr = &options;
 
-    jscrolledlist* sl = jscrolledlist_create(pick_info_fn, pick_paint_fn, (jwidget*)scene);
-    jlist_update_model(sl->list, options.size(), nullptr);
+    jscrolledlist* sl = (jscrolledlist*)jscrolledlist_create((jlist_item_info_function)pick_info_fn, (jlist_item_paint_function)pick_paint_fn, (jwidget*)scene);
+    jlist_update_model((::jlist*)sl->list, options.size(), nullptr);
     jwidget_set_stretch((jwidget*)sl, 1, 1, false);
 
     // Footer
@@ -494,7 +494,7 @@ std::string pick(std::vector<std::string> const& options, std::string const& pro
             jscene_render((jscene*)scene);
             dupdate();
         } else if (e.type == JBUTTON_TRIGGERED && e.source == btn_ok) {
-            int idx = jlist_selected_item(sl->list);
+            int idx = jlist_selected_item((::jlist*)sl->list);
             if (idx >= 0 && idx < (int)options.size()) {
                 result = options[idx];
             }
