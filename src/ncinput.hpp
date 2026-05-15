@@ -3,6 +3,11 @@
 #include <gint/display.h>
 #include <gint/keyboard.h>
 #include <justui/jwidget.h>
+
+#ifdef swap
+#undef swap
+#endif
+
 #include <string>
 #include <vector>
 #include <map>
@@ -30,6 +35,8 @@ enum class ThemeName {
 };
 
 Theme const& get_theme(ThemeName name);
+
+void init();
 
 // Public API matching cinput.py
 std::string input(std::string const& prompt = "Input:", std::string const& type = "alpha_numeric", ThemeName theme = ThemeName::Light);

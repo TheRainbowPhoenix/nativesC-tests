@@ -13,31 +13,31 @@ namespace ced {
 int show_outline(std::string const& filename, ncinput::ThemeName theme_name) {
     auto const& t = ncinput::get_theme(theme_name);
     jscene* scene = jscene_create_fullscreen(nullptr);
-    jlayout_set_vbox(scene)->spacing = 0;
-    jwidget_set_background(scene, t.modal_bg);
+    jlayout_set_vbox((jwidget*)scene)->spacing = 0;
+    jwidget_set_background((jwidget*)scene, t.modal_bg);
 
     // Header
-    jwidget* header = jwidget_create(scene);
+    jwidget* header = jwidget_create((jwidget*)scene);
     jlayout_set_hbox(header);
     jwidget_set_fixed_height(header, 40);
     jwidget_set_background(header, t.accent);
-    jlabel* lbl_title = jlabel_create("Outline", header);
+    jlabel* lbl_title = jlabel_create("Outline", (jwidget*)header);
     jlabel_set_color(lbl_title, t.txt_acc);
     jwidget_set_stretch(header, 1, 0, false);
 
     // Body (Initially show a button to run)
-    jwidget* body = jwidget_create(scene);
+    jwidget* body = jwidget_create((jwidget*)scene);
     jlayout_set_stack(body);
     jwidget_set_stretch(body, 1, 1, false);
 
-    jwidget* prompt_view = jwidget_create(body);
+    jwidget* prompt_view = jwidget_create((jwidget*)body);
     jlayout_set_vbox(prompt_view)->spacing = 10;
-    jlabel_create("This may take time for large files.", prompt_view);
-    jbutton* btn_run = jbutton_create("Run Analysis", prompt_view);
+    jlabel_create("This may take time for large files.", (jwidget*)prompt_view);
+    jbutton* btn_run = jbutton_create("Run Analysis", (jwidget*)prompt_view);
 
-    jwidget* result_view = jwidget_create(body);
+    jwidget* result_view = jwidget_create((jwidget*)body);
     jlayout_set_vbox(result_view);
-    jscrolledlist* sl = jscrolledlist_create(result_view);
+    jscrolledlist* sl = jscrolledlist_create((jwidget*)result_view);
     jwidget_set_stretch(sl, 1, 1, false);
 
     jwidget_set_visible(result_view, false);
@@ -52,6 +52,12 @@ int show_outline(std::string const& filename, ncinput::ThemeName theme_name) {
 
     while (running) {
         jevent e = jscene_run(scene);
+
+        // Ensure analysis continues even without blocking events
+        // Note: in a real single-threaded JustUI app, we'd need jscene_run
+        // to be non-blocking or use a timer.
+        // For this port, we'll process chunks whenever jscene_run returns.
+
         if (analyzing) {
             // Cooperative multitasking to simulate background threading
             std::string line;
@@ -60,8 +66,10 @@ int show_outline(std::string const& filename, ncinput::ThemeName theme_name) {
                 if (first != std::string::npos) {
                     std::string trimmed = line.substr(first);
                     if (trimmed.compare(0, 4, "def ") == 0 || trimmed.compare(0, 6, "class ") == 0) {
+                        std::string indent_str(first, ' ');
+                        std::string display_name = indent_str + (trimmed.compare(0, 6, "class ") == 0 ? "◈ " : "○ ") + trimmed;
                         items.push_back({trimmed, analyzer_line_idx, (int)first});
-                        jscrolledlist_add_item(sl, trimmed.c_str());
+                        jscrolledlist_add_item(sl, display_name.c_str());
                     }
                 }
                 analyzer_line_idx++;
@@ -81,7 +89,7 @@ int show_outline(std::string const& filename, ncinput::ThemeName theme_name) {
 
         if (e.type == JSCENE_PAINT) {
             dclear(t.modal_bg);
-            jscene_render(scene);
+            jscene_render((jwidget*)scene);
             if (analyzing) {
                 dtext(160, 500, C_RED, "Analyzing... Press EXIT to stop");
             }
@@ -103,7 +111,7 @@ int show_outline(std::string const& filename, ncinput::ThemeName theme_name) {
         }
     }
 
-    jwidget_destroy(scene);
+    jwidget_destroy((jwidget*)scene);
     return result_line;
 }
 

@@ -12,6 +12,8 @@
 #include <gint/keyboard.h>
 #include <fstream>
 #include <sstream>
+#include <cctype>
+#include <cstdio>
 
 namespace ced {
 
@@ -20,7 +22,7 @@ Editor::Editor() : filename("untitled.py"), cx(0), cy(0), vy(0), total_lines(1),
 }
 
 Editor::~Editor() {
-    jwidget_destroy(scene);
+    jwidget_destroy((jwidget*)scene);
 }
 
 void Editor::load_config() {
@@ -36,41 +38,99 @@ void Editor::load_config() {
 }
 
 void Editor::load_file(std::string const& path) {
-    std::ifstream f(path);
-    if (f.is_open()) {
+    if (file_handle.is_open()) file_handle.close();
+    file_handle.open(path, std::ios::binary);
+    if (file_handle.is_open()) {
         filename = path;
         total_lines = 0;
+        line_offsets.clear();
+        lines.clear();
+        line_loaded.clear();
+        loaded_indices.clear();
+        token_cache.clear();
         std::string line;
-        while (std::getline(f, line)) {
+        while (true) {
+            line_offsets.push_back(file_handle.tellg());
+            if (!std::getline(file_handle, line)) break;
+            lines.push_back("");
+            line_loaded.push_back(false);
             total_lines++;
         }
-        if (total_lines == 0) total_lines = 1;
+        if (total_lines == 0) {
+            total_lines = 1;
+            line_offsets.push_back(0);
+            lines.push_back("");
+            line_loaded.push_back(true);
+        }
         cx = cy = vy = 0;
     }
 }
 
-std::string Editor::get_line(int index) {
-    if (index < 0 || index >= total_lines) return "";
-    std::ifstream f(filename);
-    std::string line;
-    for (int i = 0; i <= index; ++i) {
-        if (!std::getline(f, line)) return "";
+static std::string EMPTY_LINE = "";
+std::string& Editor::get_line(int index) {
+    if (index < 0 || index >= total_lines) return EMPTY_LINE;
+    if (line_loaded[index]) return lines[index];
+
+    file_handle.clear();
+    file_handle.seekg(line_offsets[index]);
+    std::getline(file_handle, lines[index]);
+    line_loaded[index] = true;
+    loaded_indices.push_back(index);
+
+    // Evict old lines if there are too many loaded (O(1)ish eviction)
+    if (loaded_indices.size() > 500) {
+        size_t to_evict = loaded_indices.size() - 400;
+        for (size_t k = 0; k < to_evict; ++k) {
+            int idx = loaded_indices[k];
+            // Don't evict what's near the viewport
+            if (idx < vy - 50 || idx > vy + 50) {
+                lines[idx].clear();
+                lines[idx].shrink_to_fit();
+                line_loaded[idx] = false;
+                token_cache.erase(idx);
+            }
+        }
+        loaded_indices.erase(loaded_indices.begin(), loaded_indices.begin() + to_evict);
     }
-    return line;
+
+    return lines[index];
 }
 
 void Editor::save_file(std::string const& path) {
     std::string target = path.empty() ? filename : path;
+    bool is_save_as = !path.empty() || target == "untitled.py";
+
     if (target == "untitled.py") {
         target = ncinput::input("Save as:", "alpha_numeric", current_theme);
         if (target.empty()) return;
     }
-    std::ofstream f(target);
-    if (f.is_open()) {
-        for (size_t i = 0; i < lines.size(); ++i) {
-            f << lines[i] << (i == lines.size() - 1 ? "" : "\n");
+
+    if (is_save_as) {
+        std::ifstream check(target);
+        if (check.good()) {
+            check.close();
+            if (!ncinput::ask("Overwrite?", "File already exists. Overwrite?", "Yes", "No", current_theme)) {
+                return;
+            }
         }
+    }
+
+    std::string temp_target = target + ".tmp";
+    std::ofstream f(temp_target, std::ios::binary);
+    if (f.is_open()) {
+        for (int i = 0; i < total_lines; ++i) {
+            f << get_line(i) << "\n";
+        }
+        f.close();
+
+        // Close source handle before renaming
+        if (file_handle.is_open()) file_handle.close();
+
+        std::remove(target.c_str());
+        std::rename(temp_target.c_str(), target.c_str());
+
         filename = target;
+        load_file(filename); // Re-initialize with new offsets
     }
 }
 
@@ -125,7 +185,7 @@ void Editor::do_menu() {
     }
 }
 
-std::vector<Editor::Token> Editor::tokenize(int line_idx, std::string const& line) {
+std::vector<Editor::Token> const& Editor::tokenize(int line_idx, std::string const& line) {
     if (token_cache.count(line_idx)) return token_cache[line_idx];
 
     std::vector<Token> tokens;
@@ -182,11 +242,11 @@ std::vector<Editor::Token> Editor::tokenize(int line_idx, std::string const& lin
         }
     }
     token_cache[line_idx] = tokens;
-    return tokens;
+    return token_cache[line_idx];
 }
 
 void Editor::draw_line(int x, int y, int line_idx, std::string const& line) {
-    auto tokens = tokenize(line_idx, line);
+    auto const& tokens = tokenize(line_idx, line);
     int cur_x = x;
     for (auto const& tok : tokens) {
         dtext(cur_x, y, tok.color, tok.text.c_str());
@@ -196,16 +256,6 @@ void Editor::draw_line(int x, int y, int line_idx, std::string const& line) {
     }
 }
 
-void Editor::load_chunk(size_t offset) {
-    std::ifstream f(filename, std::ios::binary);
-    if (f.is_open()) {
-        f.seekg(offset);
-        char buffer[1024];
-        f.read(buffer, sizeof(buffer));
-        current_chunk = std::string(buffer, f.gcount());
-        chunk_offset = offset;
-    }
-}
 
 void Editor::render() {
     auto const& t = ncinput::get_theme(current_theme);
@@ -213,7 +263,7 @@ void Editor::render() {
 
     int y = 45;
     for (int i = vy; i < total_lines && y < 528; ++i) {
-        std::string line = get_line(i);
+        std::string& line = get_line(i);
         draw_line(5, y, i, line);
         if (i == cy) {
             int cw, ch;
@@ -252,6 +302,45 @@ void Editor::run() {
         } else if (e.key == KEY_RIGHT) {
             std::string line = get_line(cy);
             if (cx < (int)line.length()) cx++;
+        } else if (e.key >= ' ' && e.key <= '~') {
+            // Basic character input
+            std::string& line = get_line(cy);
+            line.insert(cx, 1, (char)e.key);
+            token_cache.erase(cy);
+            cx++;
+        } else if (e.key == KEY_DEL) {
+            std::string& line = get_line(cy);
+            if (cx > 0) {
+                line.erase(cx - 1, 1);
+                token_cache.erase(cy);
+                cx--;
+            } else if (cy > 0) {
+                // Join with previous line
+                std::string current = get_line(cy);
+                std::string& prev = get_line(cy - 1);
+                cx = prev.length();
+                prev += current;
+                lines.erase(lines.begin() + cy);
+                line_loaded.erase(line_loaded.begin() + cy);
+                line_offsets.erase(line_offsets.begin() + cy);
+                total_lines--;
+                token_cache.clear();
+                cy--;
+            }
+        } else if (e.key == KEY_EXE) {
+            // New line
+            std::string& line = get_line(cy);
+            std::string rem = line.substr(cx);
+            line = line.substr(0, cx);
+            token_cache.erase(cy);
+
+            cy++;
+            total_lines++;
+            lines.insert(lines.begin() + cy, rem);
+            line_loaded.insert(line_loaded.begin() + cy, true);
+            line_offsets.insert(line_offsets.begin() + cy, 0);
+            token_cache.clear();
+            cx = 0;
         } else if (e.key == KEY_EXIT) {
             running = false;
         }

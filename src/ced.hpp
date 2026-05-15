@@ -1,7 +1,16 @@
 #pragma once
+#include <justui/jscene.h>
+
+#ifdef swap
+#undef swap
+#endif
+
 #include <string>
 #include <vector>
-#include <justui/jscene.h>
+#include <map>
+#include <fstream>
+#include <ios>
+#include <cstdio>
 #include "ncinput.hpp"
 
 namespace ced {
@@ -18,15 +27,18 @@ public:
 
 private:
     void render();
-    void handle_events();
     void do_menu();
 
     std::string filename;
     int cx, cy; // Cursor pos
     int vy; // Viewport Y (line index)
     int total_lines;
+    std::vector<std::streampos> line_offsets;
+    std::vector<std::string> lines;
+    std::vector<bool> line_loaded;
+    std::vector<int> loaded_indices;
 
-    std::string get_line(int index);
+    std::string& get_line(int index);
 
     ncinput::ThemeName current_theme;
     bool word_wrap;
@@ -36,16 +48,12 @@ private:
         int color;
     };
     std::map<int, std::vector<Token>> token_cache;
-    std::vector<Token> tokenize(int line_idx, std::string const& line);
+    std::vector<Token> const& tokenize(int line_idx, std::string const& line);
     void draw_line(int x, int y, int line_idx, std::string const& line);
 
     jscene* scene;
     bool running;
-
-    // Efficient file handling
-    std::string current_chunk;
-    size_t chunk_offset;
-    void load_chunk(size_t offset);
+    std::ifstream file_handle;
 };
 
 } // namespace ced

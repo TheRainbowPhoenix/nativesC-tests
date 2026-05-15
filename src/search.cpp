@@ -1,6 +1,7 @@
 #include "search.hpp"
 #include <fstream>
 #include <vector>
+#include <cstdio>
 
 namespace ced {
 

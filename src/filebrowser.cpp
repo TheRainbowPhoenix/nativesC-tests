@@ -11,24 +11,24 @@ namespace filebrowser {
 std::string browse(std::string const& title, ncinput::ThemeName theme_name) {
     auto const& t = ncinput::get_theme(theme_name);
     jscene* scene = jscene_create_fullscreen(nullptr);
-    jlayout_set_vbox(scene)->spacing = 0;
-    jwidget_set_background(scene, t.modal_bg);
+    jlayout_set_vbox((jwidget*)scene)->spacing = 0;
+    jwidget_set_background((jwidget*)scene, t.modal_bg);
 
     // Header
-    jwidget* header = jwidget_create(scene);
+    jwidget* header = jwidget_create((jwidget*)scene);
     jlayout_set_hbox(header);
     jwidget_set_fixed_height(header, 40);
     jwidget_set_background(header, t.accent);
-    jlabel* lbl_title = jlabel_create(title.c_str(), header);
+    jlabel* lbl_title = jlabel_create(title.c_str(), (jwidget*)header);
     jlabel_set_color(lbl_title, t.txt_acc);
     jwidget_set_stretch(header, 1, 0, false);
 
     // File Selector
-    jfileselect* fs = jfileselect_create(scene);
+    jfileselect* fs = jfileselect_create((jwidget*)scene);
     jwidget_set_stretch(fs, 1, 1, false);
 
     // Footer
-    jwidget* footer = jwidget_create(scene);
+    jwidget* footer = jwidget_create((jwidget*)scene);
     jlayout_set_hbox(footer);
     jwidget_set_fixed_height(footer, 45);
     jwidget_set_background(footer, t.key_spec);
@@ -45,7 +45,7 @@ std::string browse(std::string const& title, ncinput::ThemeName theme_name) {
         jevent e = jscene_run(scene);
         if (e.type == JSCENE_PAINT) {
             dclear(t.modal_bg);
-            jscene_render(scene);
+            jscene_render((jwidget*)scene);
             dupdate();
         } else if (e.type == JBUTTON_TRIGGERED) {
             if (e.source == btn_ok) {
@@ -62,7 +62,7 @@ std::string browse(std::string const& title, ncinput::ThemeName theme_name) {
         }
     }
 
-    jwidget_destroy(scene);
+    jwidget_destroy((jwidget*)scene);
     return result;
 }
 

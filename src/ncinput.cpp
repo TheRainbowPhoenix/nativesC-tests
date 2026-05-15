@@ -11,6 +11,7 @@
 #include <cstring>
 #include <cctype>
 #include <cstdlib>
+#include <new>
 
 namespace ncinput {
 
@@ -194,7 +195,7 @@ static void nkeyboard_poly_render(void* w0, int x, int y) {
 
     if (k->enable_tabs) {
         int tab_w = 320 / 3;
-        const char* tabs[] = {"ABC", "Sym", "Math"};
+        static const char* tabs[] = {"ABC", "Sym", "Math"};
         for (int i = 0; i < 3; i++) {
             int tx = x + i * tab_w;
             bool is_active = (i == k->current_tab);
@@ -208,10 +209,11 @@ static void nkeyboard_poly_render(void* w0, int x, int y) {
         }
 
         if (k->current_tab == 2) {
-            auto keys = get_math_rects(k_y);
-            for (auto const& kr : keys) {
+            static std::vector<KeyRect> math_keys;
+            if (math_keys.empty()) math_keys = get_math_rects(0);
+            for (auto const& kr : math_keys) {
                 bool is_pressed = (k->last_key == kr.val);
-                draw_key_impl(x + kr.x, kr.y, kr.w, kr.h, kr.label, kr.is_spec, is_pressed, kr.is_acc, t);
+                draw_key_impl(x + kr.x, k_y + (kr.y - 0), kr.w, kr.h, kr.label, kr.is_spec, is_pressed, kr.is_acc, t);
             }
         } else {
             auto const& layout = (k->current_tab == 1) ? LAYOUT_SYM : LAYOUT_QWERTY;
@@ -220,11 +222,11 @@ static void nkeyboard_poly_render(void* w0, int x, int y) {
             for (size_t r = 0; r < layout.size(); r++) {
                 int kw = 320 / layout[r].size();
                 for (size_t c = 0; c < layout[r].size(); c++) {
-                    std::string label = layout[r][c];
+                    char label_buf[2] = { (char)layout[r][c][0], 0 };
                     if (k->current_tab == 0 && k->shift) {
-                        label[0] = toupper(label[0]);
+                        label_buf[0] = toupper(label_buf[0]);
                     }
-                    draw_key_impl(x + c * kw, grid_y + r * row_h, kw, row_h, label, false, k->last_key == label, false, t);
+                    draw_key_impl(x + c * kw, grid_y + r * row_h, kw, row_h, label_buf, false, k->last_key == label_buf, false, t);
                 }
             }
             int bot_y = grid_y + 4 * row_h;
@@ -234,10 +236,11 @@ static void nkeyboard_poly_render(void* w0, int x, int y) {
             draw_key_impl(x + 260, bot_y, 60, row_h, "EXE", false, k->last_key == "ENTER", true, t);
         }
     } else {
-        auto keys = get_numpad_rects(k_y);
-        for (auto const& kr : keys) {
+        static std::vector<KeyRect> numpad_keys;
+        if (numpad_keys.empty()) numpad_keys = get_numpad_rects(0);
+        for (auto const& kr : numpad_keys) {
             bool is_pressed = (k->last_key == kr.val);
-            draw_key_impl(x + kr.x, kr.y, kr.w, kr.h, kr.label, kr.is_spec, is_pressed, kr.is_acc, t);
+            draw_key_impl(x + kr.x, k_y + (kr.y - 0), kr.w, kr.h, kr.label, kr.is_spec, is_pressed, kr.is_acc, t);
         }
     }
 }
@@ -332,10 +335,9 @@ static bool nkeyboard_poly_event(void* w0, jevent e) {
 
 static void nkeyboard_poly_destroy(void* w0) {
     nkeyboard* k = (nkeyboard*)w0;
-    // nkeyboard is allocated via malloc in nkeyboard_create
-    // JustUI calls this when the widget is destroyed.
-    // However, JustUI's jwidget_destroy also frees the jwidget itself if it's the root.
-    // We need to be careful not to double free if JustUI frees the pointer passed to it.
+    k->~nkeyboard();
+    // malloc was used in nkeyboard_create, JustUI will free() the jwidget pointer
+    // since this is called from jwidget_destroy.
 }
 
 static jwidget_poly type_nkeyboard = {
@@ -349,8 +351,9 @@ static jwidget_poly type_nkeyboard = {
 
 nkeyboard* nkeyboard_create(void* parent, ThemeName theme, bool enable_tabs) {
     if (keyboard_type_id < 0) return nullptr;
-    nkeyboard* k = (nkeyboard*)malloc(sizeof *k);
+    nkeyboard* k = (nkeyboard*)malloc(sizeof(nkeyboard));
     if (!k) return nullptr;
+    new (k) nkeyboard();
     jwidget_init(&k->widget, keyboard_type_id, parent);
     k->theme_name = theme;
     k->current_tab = 0;
@@ -369,25 +372,25 @@ nkeyboard* nkeyboard_create(void* parent, ThemeName theme, bool enable_tabs) {
 std::string input(std::string const& prompt, std::string const& type, ThemeName theme) {
     Theme const& t = get_theme(theme);
     jscene* scene = jscene_create_fullscreen(nullptr);
-    jlayout_set_vbox(scene)->spacing = 0;
-    jwidget_set_background(scene, t.modal_bg);
+    jlayout_set_vbox((jwidget*)scene)->spacing = 0;
+    jwidget_set_background((jwidget*)scene, t.modal_bg);
 
     // Header
-    jwidget* header = jwidget_create(scene);
+    jwidget* header = jwidget_create((jwidget*)scene);
     jlayout_set_hbox(header);
     jwidget_set_fixed_height(header, 40);
     jwidget_set_background(header, t.accent);
-    jlabel* lbl_prompt = jlabel_create(prompt.c_str(), header);
+    jlabel* lbl_prompt = jlabel_create(prompt.c_str(), (jwidget*)header);
     jlabel_set_color(lbl_prompt, t.txt_acc);
     jwidget_set_stretch(header, 1, 0, false);
 
     // Body
-    jwidget* body = jwidget_create(scene);
+    jwidget* body = jwidget_create((jwidget*)scene);
     jlayout_set_vbox(body);
     jwidget_set_stretch(body, 1, 1, false);
 
     std::string text = "";
-    jlabel* lbl_text = jlabel_create("_", body);
+    jlabel* lbl_text = jlabel_create("_", (jwidget*)body);
     jlabel_set_color(lbl_text, t.txt);
 
     // Keyboard
@@ -399,7 +402,7 @@ std::string input(std::string const& prompt, std::string const& type, ThemeName 
         start_tab = 2;
     }
 
-    nkeyboard* kbd = nkeyboard_create(scene, theme, enable_tabs);
+    nkeyboard* kbd = nkeyboard_create((jwidget*)scene, theme, enable_tabs);
     kbd->current_tab = start_tab;
     bool finished = false;
     kbd->target_text = &text;
@@ -415,9 +418,7 @@ std::string input(std::string const& prompt, std::string const& type, ThemeName 
         if (e.type == JSCENE_PAINT) {
             dclear(t.modal_bg);
             std::string display_text = text + "_";
-            strncpy(text_buf, display_text.c_str(), sizeof(text_buf) - 1);
-            text_buf[sizeof(text_buf) - 1] = '\0';
-            lbl_text->text = text_buf;
+            jlabel_set_text(lbl_text, display_text.c_str());
             jscene_render(scene);
             dupdate();
         } else if (e.type == JWIDGET_KEY && e.key.type == KEYEV_DOWN) {
@@ -431,36 +432,37 @@ std::string input(std::string const& prompt, std::string const& type, ThemeName 
     }
 
     if (!cancelled) result = text;
-    jwidget_destroy(scene);
+    jwidget_destroy((jwidget*)scene);
     return cancelled ? "" : result;
 }
 
 #include <justui/jscrolledlist.h>
+#include <cstdio>
 
 std::string pick(std::vector<std::string> const& options, std::string const& prompt, ThemeName theme, bool multi) {
     Theme const& t = get_theme(theme);
     jscene* scene = jscene_create_fullscreen(nullptr);
-    jlayout_set_vbox(scene)->spacing = 0;
-    jwidget_set_background(scene, t.modal_bg);
+    jlayout_set_vbox((jwidget*)scene)->spacing = 0;
+    jwidget_set_background((jwidget*)scene, t.modal_bg);
 
     // Header
-    jwidget* header = jwidget_create(scene);
+    jwidget* header = jwidget_create((jwidget*)scene);
     jlayout_set_hbox(header);
     jwidget_set_fixed_height(header, 40);
     jwidget_set_background(header, t.accent);
-    jlabel* lbl_prompt = jlabel_create(prompt.c_str(), header);
+    jlabel* lbl_prompt = jlabel_create(prompt.c_str(), (jwidget*)header);
     jlabel_set_color(lbl_prompt, t.txt_acc);
     jwidget_set_stretch(header, 1, 0, false);
 
     // List
-    jscrolledlist* sl = jscrolledlist_create(scene);
+    jscrolledlist* sl = jscrolledlist_create((jwidget*)scene);
     jwidget_set_stretch(sl, 1, 1, false);
     for (auto const& opt : options) {
         jscrolledlist_add_item(sl, opt.c_str());
     }
 
     // Footer
-    jwidget* footer = jwidget_create(scene);
+    jwidget* footer = jwidget_create((jwidget*)scene);
     jlayout_set_hbox(footer);
     jwidget_set_fixed_height(footer, 45);
     jwidget_set_background(footer, t.key_spec);
@@ -475,7 +477,7 @@ std::string pick(std::vector<std::string> const& options, std::string const& pro
         jevent e = jscene_run(scene);
         if (e.type == JSCENE_PAINT) {
             dclear(t.modal_bg);
-            jscene_render(scene);
+            jscene_render((jwidget*)scene);
             dupdate();
         } else if (e.type == JBUTTON_TRIGGERED && e.source == btn_ok) {
             int idx = jscrolledlist_get_selected_index(sl);
@@ -491,34 +493,34 @@ std::string pick(std::vector<std::string> const& options, std::string const& pro
         }
     }
 
-    jwidget_destroy(scene);
+    jwidget_destroy((jwidget*)scene);
     return result;
 }
 
 bool ask(std::string const& title, std::string const& body, std::string const& ok_text, std::string const& cancel_text, ThemeName theme) {
     Theme const& t = get_theme(theme);
     jscene* scene = jscene_create_fullscreen(nullptr);
-    jlayout_set_vbox(scene)->spacing = 0;
-    jwidget_set_background(scene, t.modal_bg);
+    jlayout_set_vbox((jwidget*)scene)->spacing = 0;
+    jwidget_set_background((jwidget*)scene, t.modal_bg);
 
     // Header
-    jwidget* header = jwidget_create(scene);
+    jwidget* header = jwidget_create((jwidget*)scene);
     jlayout_set_hbox(header);
     jwidget_set_fixed_height(header, 40);
     jwidget_set_background(header, t.accent);
-    jlabel* lbl_title = jlabel_create(title.c_str(), header);
+    jlabel* lbl_title = jlabel_create(title.c_str(), (jwidget*)header);
     jlabel_set_color(lbl_title, t.txt_acc);
     jwidget_set_stretch(header, 1, 0, false);
 
     // Body
-    jwidget* body_cont = jwidget_create(scene);
+    jwidget* body_cont = jwidget_create((jwidget*)scene);
     jlayout_set_vbox(body_cont);
     jwidget_set_stretch(body_cont, 1, 1, false);
-    jlabel* lbl_body = jlabel_create(body.c_str(), body_cont);
+    jlabel* lbl_body = jlabel_create(body.c_str(), (jwidget*)body_cont);
     jlabel_set_color(lbl_body, t.txt);
 
     // Footer
-    jwidget* footer = jwidget_create(scene);
+    jwidget* footer = jwidget_create((jwidget*)scene);
     jlayout_set_hbox(footer);
     jwidget_set_fixed_height(footer, 45);
     jwidget_set_background(footer, t.key_spec);
@@ -535,7 +537,7 @@ bool ask(std::string const& title, std::string const& body, std::string const& o
         jevent e = jscene_run(scene);
         if (e.type == JSCENE_PAINT) {
             dclear(t.modal_bg);
-            jscene_render(scene);
+            jscene_render((jwidget*)scene);
             dupdate();
         } else if (e.type == JBUTTON_TRIGGERED) {
             if (e.source == btn_ok) {
@@ -558,8 +560,8 @@ bool ask(std::string const& title, std::string const& body, std::string const& o
 }
 
 // --- Initialization ---
-__attribute__((constructor))
-static void ncinput_init() {
+void init() {
+    if (keyboard_type_id >= 0) return;
     keyboard_type_id = j_register_widget(&type_nkeyboard);
     NKEYBOARD_KEY_PRESSED = j_register_event();
 }
