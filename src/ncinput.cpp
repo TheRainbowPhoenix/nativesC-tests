@@ -377,17 +377,17 @@ std::string input(std::string const& prompt, std::string const& type, ThemeName 
 
     // Header
     jwidget* header = jwidget_create((jwidget*)scene);
-    jlayout_set_hbox(header);
-    jwidget_set_fixed_height(header, 40);
-    jwidget_set_background(header, t.accent);
+    jlayout_set_hbox((jwidget*)header);
+    jwidget_set_fixed_height((jwidget*)header, 40);
+    jwidget_set_background((jwidget*)header, t.accent);
     jlabel* lbl_prompt = jlabel_create(prompt.c_str(), (jwidget*)header);
     jlabel_set_text_color(lbl_prompt, t.txt_acc);
-    jwidget_set_stretch(header, 1, 0, false);
+    jwidget_set_stretch((jwidget*)header, 1, 0, false);
 
     // Body
     jwidget* body = jwidget_create((jwidget*)scene);
-    jlayout_set_vbox(body);
-    jwidget_set_stretch(body, 1, 1, false);
+    jlayout_set_vbox((jwidget*)body);
+    jwidget_set_stretch((jwidget*)body, 1, 1, false);
 
     std::string text = "";
     jlabel* lbl_text = jlabel_create("_", (jwidget*)body);
@@ -438,6 +438,21 @@ std::string input(std::string const& prompt, std::string const& type, ThemeName 
 #include <justui/jscrolledlist.h>
 #include <cstdio>
 
+// Helper for pick() - must be outside to be accessible by capture-less lambdas
+static std::vector<std::string> const* pick_options_ptr = nullptr;
+
+static void pick_info_fn(::jlist* /* l */, int /* i */, ::jlist_item_info* info) {
+    info->selectable = true;
+    info->triggerable = true;
+    info->natural_height = 20;
+}
+
+static void pick_paint_fn(int x, int y, int /* w */, int /* h */, ::jlist* /* l */, int i, bool sel) {
+    if (pick_options_ptr && i >= 0 && i < (int)pick_options_ptr->size()) {
+        dtext(x + 5, y + 2, sel ? C_WHITE : C_BLACK, (*pick_options_ptr)[i].c_str());
+    }
+}
+
 std::string pick(std::vector<std::string> const& options, std::string const& prompt, ThemeName theme, bool multi) {
     Theme const& t = get_theme(theme);
     jscene* scene = (jscene*)jscene_create_fullscreen(nullptr);
@@ -446,40 +461,28 @@ std::string pick(std::vector<std::string> const& options, std::string const& pro
 
     // Header
     jwidget* header = jwidget_create((jwidget*)scene);
-    jlayout_set_hbox(header);
-    jwidget_set_fixed_height(header, 40);
-    jwidget_set_background(header, t.accent);
+    jlayout_set_hbox((jwidget*)header);
+    jwidget_set_fixed_height((jwidget*)header, 40);
+    jwidget_set_background((jwidget*)header, t.accent);
     jlabel* lbl_prompt = jlabel_create(prompt.c_str(), (jwidget*)header);
     jlabel_set_text_color(lbl_prompt, t.txt_acc);
-    jwidget_set_stretch(header, 1, 0, false);
+    jwidget_set_stretch((jwidget*)header, 1, 0, false);
 
     // Implementation for pick using jscrolledlist
-    static std::vector<std::string> const* current_options;
-    current_options = &options;
+    pick_options_ptr = &options;
 
-    auto info_fn = [](jlist* /* l */, int /* i */, jlist_item_info* info) {
-        info->selectable = true;
-        info->triggerable = true;
-        info->natural_height = 20;
-    };
-    auto paint_fn = [](int x, int y, int /* w */, int /* h */, jlist* /* l */, int i, bool sel) {
-        if (current_options && i >= 0 && i < (int)current_options->size()) {
-            dtext(x + 5, y + 2, sel ? C_WHITE : C_BLACK, (*current_options)[i].c_str());
-        }
-    };
-
-    jscrolledlist* sl = (jscrolledlist*)jscrolledlist_create(info_fn, paint_fn, (jwidget*)scene);
+    jscrolledlist* sl = jscrolledlist_create(pick_info_fn, pick_paint_fn, (jwidget*)scene);
     jlist_update_model(sl->list, options.size(), nullptr);
     jwidget_set_stretch((jwidget*)sl, 1, 1, false);
 
     // Footer
     jwidget* footer = jwidget_create((jwidget*)scene);
-    jlayout_set_hbox(footer);
-    jwidget_set_fixed_height(footer, 45);
-    jwidget_set_background(footer, t.key_spec);
-    jbutton* btn_ok = jbutton_create(multi ? "OK" : "Select", footer);
-    jwidget_set_stretch(btn_ok, 1, 0, false);
-    jwidget_set_stretch(footer, 1, 0, false);
+    jlayout_set_hbox((jwidget*)footer);
+    jwidget_set_fixed_height((jwidget*)footer, 45);
+    jwidget_set_background((jwidget*)footer, t.key_spec);
+    jbutton* btn_ok = jbutton_create(multi ? "OK" : "Select", (jwidget*)footer);
+    jwidget_set_stretch((jwidget*)btn_ok, 1, 0, false);
+    jwidget_set_stretch((jwidget*)footer, 1, 0, false);
 
     bool running = true;
     std::string result = "";
@@ -522,30 +525,30 @@ bool ask(std::string const& title, std::string const& body, std::string const& o
 
     // Header
     jwidget* header = jwidget_create((jwidget*)scene);
-    jlayout_set_hbox(header);
-    jwidget_set_fixed_height(header, 40);
-    jwidget_set_background(header, t.accent);
+    jlayout_set_hbox((jwidget*)header);
+    jwidget_set_fixed_height((jwidget*)header, 40);
+    jwidget_set_background((jwidget*)header, t.accent);
     jlabel* lbl_title = jlabel_create(title.c_str(), (jwidget*)header);
     jlabel_set_text_color(lbl_title, t.txt_acc);
-    jwidget_set_stretch(header, 1, 0, false);
+    jwidget_set_stretch((jwidget*)header, 1, 0, false);
 
     // Body
     jwidget* body_cont = jwidget_create((jwidget*)scene);
-    jlayout_set_vbox(body_cont);
-    jwidget_set_stretch(body_cont, 1, 1, false);
+    jlayout_set_vbox((jwidget*)body_cont);
+    jwidget_set_stretch((jwidget*)body_cont, 1, 1, false);
     jlabel* lbl_body = jlabel_create(body.c_str(), (jwidget*)body_cont);
     jlabel_set_text_color(lbl_body, t.txt);
 
     // Footer
     jwidget* footer = jwidget_create((jwidget*)scene);
-    jlayout_set_hbox(footer);
-    jwidget_set_fixed_height(footer, 45);
-    jwidget_set_background(footer, t.key_spec);
-    jbutton* btn_cancel = jbutton_create(cancel_text.c_str(), footer);
-    jwidget_set_stretch(btn_cancel, 1, 0, false);
-    jbutton* btn_ok = jbutton_create(ok_text.c_str(), footer);
-    jwidget_set_stretch(btn_ok, 1, 0, false);
-    jwidget_set_stretch(footer, 1, 0, false);
+    jlayout_set_hbox((jwidget*)footer);
+    jwidget_set_fixed_height((jwidget*)footer, 45);
+    jwidget_set_background((jwidget*)footer, t.key_spec);
+    jbutton* btn_cancel = jbutton_create(cancel_text.c_str(), (jwidget*)footer);
+    jwidget_set_stretch((jwidget*)btn_cancel, 1, 0, false);
+    jbutton* btn_ok = jbutton_create(ok_text.c_str(), (jwidget*)footer);
+    jwidget_set_stretch((jwidget*)btn_ok, 1, 0, false);
+    jwidget_set_stretch((jwidget*)footer, 1, 0, false);
 
     bool running = true;
     bool result = false;

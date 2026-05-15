@@ -35,9 +35,9 @@ set(ASSETS_cg
 fxconv_declare_assets(${ASSETS} ${ASSETS_fx} ${ASSETS_cg} WITH_METADATA)
 
 add_executable(ced ${SOURCES} ${ASSETS} ${ASSETS_${FXSDK_PLATFORM}})
-target_compile_options(ced PRIVATE -Wall -Wextra -Os -g -flto=auto)
+target_compile_options(ced PRIVATE -Wall -Wextra -Os -g -flto=auto -fno-exceptions -fno-rtti -fno-threadsafe-statics)
 target_compile_features(ced PRIVATE cxx_std_17)
-target_link_libraries(ced Gint::Gint JustUI::JustUI)
+target_link_libraries(ced Gint::Gint JustUI::JustUI stdc++ m c)
 
 if("${FXSDK_PLATFORM_LONG}" STREQUAL fx9860G)
   generate_g1a(TARGET ced OUTPUT "CED.g1a"

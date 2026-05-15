@@ -15,6 +15,34 @@
 #include <cctype>
 #include <cstdio>
 
+#ifndef C_MAGENTA
+#define C_MAGENTA 0xf81f
+#endif
+
+extern "C" {
+    void __cxa_pure_virtual() { while (1); }
+    void __cxa_guard_acquire(void*) { }
+    void __cxa_guard_release(void*) { }
+    void __cxa_guard_abort(void*) { }
+
+    void _free(void* ptr) { free(ptr); }
+    void* _malloc(size_t sz) { return malloc(sz); }
+    void* _realloc(void* ptr, size_t sz) { return realloc(ptr, sz); }
+
+    void __ZSt20__throw_length_errorPKc(char const*) { while(1); }
+    void __ZSt19__throw_logic_errorPKc(char const*) { while(1); }
+    void __ZSt20__throw_out_of_rangePKc(char const*) { while(1); }
+    void __ZSt24__throw_out_of_range_fmtPKcz(char const*, ...) { while(1); }
+    void __ZSt28__throw_bad_array_new_lengthv() { while(1); }
+}
+
+void* operator new(size_t size) { return malloc(size); }
+void* operator new[](size_t size) { return malloc(size); }
+void operator delete(void* ptr) noexcept { free(ptr); }
+void operator delete[](void* ptr) noexcept { free(ptr); }
+void operator delete(void* ptr, size_t) noexcept { free(ptr); }
+void operator delete[](void* ptr, size_t) noexcept { free(ptr); }
+
 namespace ced {
 
 Editor::Editor() : filename("untitled.py"), cx(0), cy(0), vy(0), total_lines(1), current_theme(ncinput::ThemeName::Light), word_wrap(false), running(true) {
@@ -185,25 +213,24 @@ void Editor::do_menu() {
     }
 }
 
+static const std::vector<std::string> py_keywords = {
+    "def", "class", "if", "else", "elif", "while", "for", "import", "from",
+    "return", "True", "False", "None", "break", "continue", "pass", "try",
+    "except", "with", "as", "global", "print", "len", "range", "in", "is",
+    "not", "and", "or"
+};
+
 std::vector<Editor::Token> const& Editor::tokenize(int line_idx, std::string const& line) {
     if (token_cache.count(line_idx)) return token_cache[line_idx];
 
     std::vector<Token> tokens;
     auto const& t = ncinput::get_theme(current_theme);
 
-    // Simplistic Python lexer port
-    static const std::vector<std::string> keywords = {
-        "def", "class", "if", "else", "elif", "while", "for", "import", "from",
-        "return", "True", "False", "None", "break", "continue", "pass", "try",
-        "except", "with", "as", "global", "print", "len", "range", "in", "is",
-        "not", "and", "or"
-    };
-
     int col_kw = C_BLUE;
     int col_str = C_RGB(0, 128, 0);
     int col_com = C_RGB(128, 128, 128);
     int col_num = C_RED;
-    int col_op = C_RGB(31, 0, 31); // C_MAGENTA equivalent
+    int col_op = C_MAGENTA;
 
     if (current_theme == ncinput::ThemeName::Dark) {
         col_kw = C_RGB(76, 127, 255);
@@ -234,7 +261,7 @@ std::vector<Editor::Token> const& Editor::tokenize(int line_idx, std::string con
             while (i < line.length() && (isalnum(line[i]) || line[i] == '_')) i++;
             std::string word = line.substr(start, i - start);
             int color = t.txt;
-            for (auto const& kw : keywords) if (kw == word) { color = col_kw; break; }
+            for (auto const& kw : py_keywords) if (kw == word) { color = col_kw; break; }
             tokens.push_back({word, color});
         } else {
             tokens.push_back({std::string(1, c), col_op});

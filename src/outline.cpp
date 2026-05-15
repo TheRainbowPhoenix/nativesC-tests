@@ -20,38 +20,38 @@ int show_outline(std::string const& filename, ncinput::ThemeName theme_name) {
 
     // Header
     jwidget* header = jwidget_create((jwidget*)scene);
-    jlayout_set_hbox(header);
-    jwidget_set_fixed_height(header, 40);
-    jwidget_set_background(header, t.accent);
+    jlayout_set_hbox((jwidget*)header);
+    jwidget_set_fixed_height((jwidget*)header, 40);
+    jwidget_set_background((jwidget*)header, t.accent);
     jlabel* lbl_title = jlabel_create("Outline", (jwidget*)header);
     jlabel_set_text_color(lbl_title, t.txt_acc);
-    jwidget_set_stretch(header, 1, 0, false);
+    jwidget_set_stretch((jwidget*)header, 1, 0, false);
 
     // Body (Initially show a button to run)
     jwidget* body = jwidget_create((jwidget*)scene);
-    jlayout_set_stack(body);
-    jwidget_set_stretch(body, 1, 1, false);
+    jlayout_set_stack((jwidget*)body);
+    jwidget_set_stretch((jwidget*)body, 1, 1, false);
 
     jwidget* prompt_view = jwidget_create((jwidget*)body);
-    jlayout_set_vbox(prompt_view)->spacing = 10;
+    jlayout_set_vbox((jwidget*)prompt_view)->spacing = 10;
     jlabel_create("This may take time for large files.", (jwidget*)prompt_view);
     jbutton* btn_run = jbutton_create("Run Analysis", (jwidget*)prompt_view);
 
     jwidget* result_view = jwidget_create((jwidget*)body);
-    jlayout_set_vbox(result_view);
+    jlayout_set_vbox((jwidget*)result_view);
 
-    auto info_fn = [](jlist* /* l */, int /* i */, jlist_item_info* info) {
+    static auto info_fn = [](struct ::jlist*, int, struct ::jlist_item_info* info) {
         info->selectable = true;
         info->triggerable = true;
         info->natural_height = 20;
     };
-    auto paint_fn = [](int x, int y, int /* w */, int /* h */, jlist* /* l */, int i, bool sel) {
+    static auto paint_fn = [](int x, int y, int, int, struct ::jlist*, int i, bool sel) {
         if (i >= 0 && i < (int)outline_display_names.size()) {
             dtext(x + 5, y + 2, sel ? C_WHITE : C_BLACK, outline_display_names[i].c_str());
         }
     };
 
-    jscrolledlist* sl = (jscrolledlist*)jscrolledlist_create(info_fn, paint_fn, (jwidget*)result_view);
+    jscrolledlist* sl = (jscrolledlist*)jscrolledlist_create((jlist_item_info_function)info_fn, (jlist_item_paint_function)paint_fn, (jwidget*)result_view);
     jwidget_set_stretch((jwidget*)sl, 1, 1, false);
 
     jwidget_set_visible(result_view, false);
@@ -91,7 +91,7 @@ int show_outline(std::string const& filename, ncinput::ThemeName theme_name) {
                 analyzer_line_idx++;
             }
             if (model_updated) {
-                jlist_update_model(sl->list, items.size(), nullptr);
+                jlist_update_model((::jlist*)sl->list, items.size(), nullptr);
             }
             if (analyzer_f.eof()) {
                 analyzing = false;
@@ -119,9 +119,9 @@ int show_outline(std::string const& filename, ncinput::ThemeName theme_name) {
             analyzing = true;
             items.clear();
             outline_display_names.clear();
-            jlist_clear(sl->list);
+            jlist_clear((::jlist*)sl->list);
         } else if (e.type == JLIST_ITEM_TRIGGERED) {
-            int idx = jlist_selected_item(sl->list);
+            int idx = jlist_selected_item((::jlist*)sl->list);
             if (idx >= 0 && idx < (int)items.size()) {
                 result_line = items[idx].line;
                 running = false;
