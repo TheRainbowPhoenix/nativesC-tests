@@ -203,7 +203,7 @@ std::vector<Editor::Token> const& Editor::tokenize(int line_idx, std::string con
     int col_str = C_RGB(0, 128, 0);
     int col_com = C_RGB(128, 128, 128);
     int col_num = C_RED;
-    int col_op = C_MAGENTA;
+    int col_op = C_RGB(31, 0, 31); // C_MAGENTA equivalent
 
     if (current_theme == ncinput::ThemeName::Dark) {
         col_kw = C_RGB(76, 127, 255);
