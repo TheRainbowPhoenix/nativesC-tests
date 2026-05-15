@@ -89,7 +89,7 @@ int show_outline(std::string const& filename, ncinput::ThemeName theme_name) {
 
         if (e.type == JSCENE_PAINT) {
             dclear(t.modal_bg);
-            jscene_render((jwidget*)scene);
+            jscene_render((jscene*)scene);
             if (analyzing) {
                 dtext(160, 500, C_RED, "Analyzing... Press EXIT to stop");
             }

@@ -45,11 +45,11 @@ std::string browse(std::string const& title, ncinput::ThemeName theme_name) {
         jevent e = jscene_run(scene);
         if (e.type == JSCENE_PAINT) {
             dclear(t.modal_bg);
-            jscene_render((jwidget*)scene);
+            jscene_render((jscene*)scene);
             dupdate();
         } else if (e.type == JBUTTON_TRIGGERED) {
             if (e.source == btn_ok) {
-                char const* path = jfileselect_get_selected_path(fs);
+                char const* path = jfileselect_selected_file(fs);
                 if (path) result = path;
                 running = false;
             } else if (e.source == btn_cancel) {

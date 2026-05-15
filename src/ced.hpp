@@ -11,6 +11,7 @@
 #include <fstream>
 #include <ios>
 #include <cstdio>
+#include <justui/jscene.h>
 #include "ncinput.hpp"
 
 namespace ced {

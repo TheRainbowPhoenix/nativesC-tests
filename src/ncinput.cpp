@@ -371,7 +371,7 @@ nkeyboard* nkeyboard_create(void* parent, ThemeName theme, bool enable_tabs) {
 
 std::string input(std::string const& prompt, std::string const& type, ThemeName theme) {
     Theme const& t = get_theme(theme);
-    jscene* scene = jscene_create_fullscreen(nullptr);
+    jscene* scene = (jscene*)jscene_create_fullscreen(nullptr);
     jlayout_set_vbox((jwidget*)scene)->spacing = 0;
     jwidget_set_background((jwidget*)scene, t.modal_bg);
 
@@ -381,7 +381,7 @@ std::string input(std::string const& prompt, std::string const& type, ThemeName 
     jwidget_set_fixed_height(header, 40);
     jwidget_set_background(header, t.accent);
     jlabel* lbl_prompt = jlabel_create(prompt.c_str(), (jwidget*)header);
-    jlabel_set_color(lbl_prompt, t.txt_acc);
+    jlabel_set_text_color(lbl_prompt, t.txt_acc);
     jwidget_set_stretch(header, 1, 0, false);
 
     // Body
@@ -391,7 +391,7 @@ std::string input(std::string const& prompt, std::string const& type, ThemeName 
 
     std::string text = "";
     jlabel* lbl_text = jlabel_create("_", (jwidget*)body);
-    jlabel_set_color(lbl_text, t.txt);
+    jlabel_set_text_color(lbl_text, t.txt);
 
     // Keyboard
     bool enable_tabs = true;
@@ -412,14 +412,13 @@ std::string input(std::string const& prompt, std::string const& type, ThemeName 
     std::string result = "";
     bool cancelled = false;
 
-    char text_buf[256];
     while (running && !finished) {
         jevent e = jscene_run(scene);
         if (e.type == JSCENE_PAINT) {
             dclear(t.modal_bg);
             std::string display_text = text + "_";
             jlabel_set_text(lbl_text, display_text.c_str());
-            jscene_render(scene);
+            jscene_render((jscene*)scene);
             dupdate();
         } else if (e.type == JWIDGET_KEY && e.key.type == KEYEV_DOWN) {
             if (e.key.key == KEY_EXIT) {
@@ -441,7 +440,7 @@ std::string input(std::string const& prompt, std::string const& type, ThemeName 
 
 std::string pick(std::vector<std::string> const& options, std::string const& prompt, ThemeName theme, bool multi) {
     Theme const& t = get_theme(theme);
-    jscene* scene = jscene_create_fullscreen(nullptr);
+    jscene* scene = (jscene*)jscene_create_fullscreen(nullptr);
     jlayout_set_vbox((jwidget*)scene)->spacing = 0;
     jwidget_set_background((jwidget*)scene, t.modal_bg);
 
@@ -451,15 +450,27 @@ std::string pick(std::vector<std::string> const& options, std::string const& pro
     jwidget_set_fixed_height(header, 40);
     jwidget_set_background(header, t.accent);
     jlabel* lbl_prompt = jlabel_create(prompt.c_str(), (jwidget*)header);
-    jlabel_set_color(lbl_prompt, t.txt_acc);
+    jlabel_set_text_color(lbl_prompt, t.txt_acc);
     jwidget_set_stretch(header, 1, 0, false);
 
-    // List
-    jscrolledlist* sl = jscrolledlist_create((jwidget*)scene);
-    jwidget_set_stretch(sl, 1, 1, false);
-    for (auto const& opt : options) {
-        jscrolledlist_add_item(sl, opt.c_str());
-    }
+    // Implementation for pick using jscrolledlist
+    static std::vector<std::string> const* current_options;
+    current_options = &options;
+
+    auto info_fn = [](struct jlist* l, int i, jlist_item_info* info) {
+        info->selectable = true;
+        info->triggerable = true;
+        info->natural_height = 20;
+    };
+    auto paint_fn = [](int x, int y, int w, int h, struct jlist* l, int i, bool sel) {
+        if (current_options && i >= 0 && i < (int)current_options->size()) {
+            dtext(x + 5, y + 2, sel ? C_WHITE : C_BLACK, (*current_options)[i].c_str());
+        }
+    };
+
+    jscrolledlist* sl = jscrolledlist_create(info_fn, paint_fn, (jwidget*)scene);
+    jlist_update_model(sl->list, options.size(), nullptr);
+    jwidget_set_stretch((jwidget*)sl, 1, 1, false);
 
     // Footer
     jwidget* footer = jwidget_create((jwidget*)scene);
@@ -477,10 +488,16 @@ std::string pick(std::vector<std::string> const& options, std::string const& pro
         jevent e = jscene_run(scene);
         if (e.type == JSCENE_PAINT) {
             dclear(t.modal_bg);
-            jscene_render((jwidget*)scene);
+            jscene_render((jscene*)scene);
             dupdate();
         } else if (e.type == JBUTTON_TRIGGERED && e.source == btn_ok) {
-            int idx = jscrolledlist_get_selected_index(sl);
+            int idx = jlist_selected_item(sl->list);
+            if (idx >= 0 && idx < (int)options.size()) {
+                result = options[idx];
+            }
+            running = false;
+        } else if (e.type == JLIST_ITEM_TRIGGERED) {
+            int idx = (int)e.data;
             if (idx >= 0 && idx < (int)options.size()) {
                 result = options[idx];
             }
@@ -499,7 +516,7 @@ std::string pick(std::vector<std::string> const& options, std::string const& pro
 
 bool ask(std::string const& title, std::string const& body, std::string const& ok_text, std::string const& cancel_text, ThemeName theme) {
     Theme const& t = get_theme(theme);
-    jscene* scene = jscene_create_fullscreen(nullptr);
+    jscene* scene = (jscene*)jscene_create_fullscreen(nullptr);
     jlayout_set_vbox((jwidget*)scene)->spacing = 0;
     jwidget_set_background((jwidget*)scene, t.modal_bg);
 
@@ -509,7 +526,7 @@ bool ask(std::string const& title, std::string const& body, std::string const& o
     jwidget_set_fixed_height(header, 40);
     jwidget_set_background(header, t.accent);
     jlabel* lbl_title = jlabel_create(title.c_str(), (jwidget*)header);
-    jlabel_set_color(lbl_title, t.txt_acc);
+    jlabel_set_text_color(lbl_title, t.txt_acc);
     jwidget_set_stretch(header, 1, 0, false);
 
     // Body
@@ -517,7 +534,7 @@ bool ask(std::string const& title, std::string const& body, std::string const& o
     jlayout_set_vbox(body_cont);
     jwidget_set_stretch(body_cont, 1, 1, false);
     jlabel* lbl_body = jlabel_create(body.c_str(), (jwidget*)body_cont);
-    jlabel_set_color(lbl_body, t.txt);
+    jlabel_set_text_color(lbl_body, t.txt);
 
     // Footer
     jwidget* footer = jwidget_create((jwidget*)scene);
@@ -537,7 +554,7 @@ bool ask(std::string const& title, std::string const& body, std::string const& o
         jevent e = jscene_run(scene);
         if (e.type == JSCENE_PAINT) {
             dclear(t.modal_bg);
-            jscene_render((jwidget*)scene);
+            jscene_render((jscene*)scene);
             dupdate();
         } else if (e.type == JBUTTON_TRIGGERED) {
             if (e.source == btn_ok) {
@@ -555,7 +572,7 @@ bool ask(std::string const& title, std::string const& body, std::string const& o
         }
     }
 
-    jwidget_destroy(scene);
+    jwidget_destroy((jwidget*)scene);
     return result;
 }
 

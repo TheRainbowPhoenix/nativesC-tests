@@ -33,7 +33,7 @@ void show_problems(std::string const& filename, ncinput::ThemeName theme_name) {
         jevent e = jscene_run(scene);
         if (e.type == JSCENE_PAINT) {
             dclear(t.modal_bg);
-            jscene_render((jwidget*)scene);
+            jscene_render((jscene*)scene);
             dupdate();
         } else if (e.type == JWIDGET_KEY && e.key.type == KEYEV_DOWN) {
             if (e.key.key == KEY_EXIT) running = false;

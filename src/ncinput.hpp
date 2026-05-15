@@ -12,6 +12,9 @@
 #include <vector>
 #include <map>
 
+#include <justui/jscrolledlist.h>
+#include <justui/jlabel.h>
+
 namespace ncinput {
 
 struct Theme {
