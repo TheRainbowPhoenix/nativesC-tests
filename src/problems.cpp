@@ -19,7 +19,7 @@ void show_problems(std::string const& filename, ncinput::ThemeName theme_name) {
     jwidget_set_fixed_height(header, 40);
     jwidget_set_background(header, t.accent);
     jlabel* lbl_title = jlabel_create("Problems", (jwidget*)header);
-    jlabel_set_color(lbl_title, t.txt_acc);
+    jlabel_set_text_color(lbl_title, t.txt_acc);
     jwidget_set_stretch(header, 1, 0, false);
 
     // Body
