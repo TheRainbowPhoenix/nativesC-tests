@@ -457,12 +457,12 @@ std::string pick(std::vector<std::string> const& options, std::string const& pro
     static std::vector<std::string> const* current_options;
     current_options = &options;
 
-    auto info_fn = [](struct ncinput::jlist* /* l */, int /* i */, ncinput::jlist_item_info* info) {
+    auto info_fn = [](jlist* /* l */, int /* i */, jlist_item_info* info) {
         info->selectable = true;
         info->triggerable = true;
         info->natural_height = 20;
     };
-    auto paint_fn = [](int x, int y, int /* w */, int /* h */, struct ncinput::jlist* /* l */, int i, bool sel) {
+    auto paint_fn = [](int x, int y, int /* w */, int /* h */, jlist* /* l */, int i, bool sel) {
         if (current_options && i >= 0 && i < (int)current_options->size()) {
             dtext(x + 5, y + 2, sel ? C_WHITE : C_BLACK, (*current_options)[i].c_str());
         }
