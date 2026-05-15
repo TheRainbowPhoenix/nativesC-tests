@@ -12,8 +12,10 @@ find_package(Gint 2.9 REQUIRED)
 find_package(JustUI 1.0 REQUIRED)
 
 set(SOURCES
-  src/main.c
-  # ...
+  src/main.cpp
+  src/ncinput.cpp
+  src/filebrowser.cpp
+  src/ced.cpp
 )
 # Shared assets, fx-9860G-only assets and fx-CG-50-only assets
 set(ASSETS
