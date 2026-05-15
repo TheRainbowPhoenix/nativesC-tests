@@ -1,0 +1,49 @@
+---
+title: CInput Documentation
+description: Welcome to the CInput docs. Let's build some sick UIs for your ClassPad!
+sidebar:
+  order: 0
+---
+
+import { LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+Yo, what's up? Welcome to the **CInput** documentation! If you're looking to drop some modern graphical interfaces on your Casio fx-CG50 or ClassPad using Python and `gint`, you've found the holy grail.
+
+CInput is your new best friend. It handles all the stressful stuff like on-screen keyboards, smooth scrollable lists, theming, and touch events, so you can focus on building legit add-ins without sweating the pixels. 
+
+Whether you're crafting a dope physics solver or just a custom note-taking app, CInput makes your app look totally premium out of the box.
+
+## Get Started
+
+If you're fresh to the scene, hit up the tutorials. We'll take you from a blank screen to a fully interactive app in zero time.
+
+<CardGrid>
+    <LinkCard
+        title="1. The Basics: Input & Lists"
+        href="/tutorial/01-basics"
+        description="Jump right in. We'll show you how to pop up keyboards, grab user input, and build scrolling lists with zero headache."
+    />
+    <LinkCard
+        title="2. Building an App Menu"
+        href="/tutorial/02-app-menu"
+        description="Learn how to hook up menus and multiple inputs into a single app shell."
+    />
+    <LinkCard
+        title="3. Advanced Custom Activities"
+        href="/tutorial/03-activities"
+        description="Learn to create dynamic lists and custom solver interfaces using the activity model."
+    />
+    <LinkCard
+        title="The Reference Manual"
+        href="/reference"
+        description="The deep dive. Check out all the props, methods, and layout tricks to totally customize your CInput widgets."
+    />
+</CardGrid>
+
+## Wait, Why CInput?
+
+Because nobody wants to hardcode `dtext` coordinates all day! You just call `cinput.input()` and boom, an animated, themed on-screen keyboard drops in. You need the user to pick an option? `cinput.pick()` throws up a sick scrollable list. It's built for touch, it's fast, and it looks mad clean.
+
+:::tip[Stay Frosty]
+Got questions about tweaking themes or building custom activities? Hit up the community! We're always sharing wild new projects and solving bugs together. Build cool stuff and flex it on your calculator!
+:::

@@ -1,0 +1,102 @@
+---
+title: CInput Reference Manual
+description: The ultimate dictionary for CInput framework.
+---
+
+Yo! You found the reference manual. Here's a quick cheat sheet on all the public tools `cinput` gives you to build the coolest UIs on the ClassPad.
+
+---
+
+### `cinput.input(prompt, type="alpha_numeric", theme="light", layout="qwerty", touch_mode=KEYEV_TOUCH_DOWN)`
+
+The single most helpful function. Pauses everything, throws up a full screen modal with a sick-looking on-screen keyboard, and returns the result (or `None` if they bail).
+
+- **`prompt` (str)**: The title of the window.
+- **`type` (str)**: What kind of keyboard you want:
+  - `"alpha_numeric"`: The full QWERTY/AZERTY keyboard with symbols.
+  - `"text"`: Same as above.
+  - `"numeric_int"`: Only a numpad. No decimal point.
+  - `"numeric_int negative"`: A numpad + negative sign.
+  - `"numeric_float"`: A numpad + decimal point.
+  - `"math"`: A special math layout for `+`, `-`, `*`, `/`.
+- **`theme` (str)**: `"light"`, `"dark"`, or your own custom theme name.
+- **`layout` (str)**: Custom keyboard map limit. Use `"qwerty"`, `"azerty"`, `"qwertz"`, or `"abc"`.
+- **`touch_mode`**: Customize when the touch is triggered. Default is when you tap `KEYEV_TOUCH_DOWN`.
+
+---
+
+### `cinput.pick(options, prompt="Select:", theme="light", multi=False, touch_mode=KEYEV_TOUCH_DOWN)`
+
+When typing takes too long, just give 'em a list. It pops up a fast, inertial-scrolling list box taking over the screen.
+
+- **`options` (List[str])**: An array of choices!
+- **`prompt` (str)**: Title bar string.
+- **`multi` (bool)**: Set this to `True` to allow multiple items with checkboxes.
+- **`Returns`**: A string if `multi=False`, or a List of Strings if `multi=True`.
+
+---
+
+### `cinput.ask(title, body, ok_text="OK", cancel_text="Cancel", theme="light", touch_mode=KEYEV_TOUCH_DOWN)`
+
+Are you sure? It's the standard modal alert screen with two huge buttons underneath the body text. 
+
+- **`title` (str)**: Large bold title.
+- **`body` (str)**: Warning phrase.
+- **`ok_text` / `cancel_text` (str)**: Define custom labels, like `"Burn It"` instead of `"OK"`.
+- **`Returns`**: True if they hit OK, False if they bailed.
+
+---
+
+### Customize Themes Like a Boss!
+
+Want everything to match your game's toxic-green aesthetic? CInput themes are just Python dictionaries. Inject yours!
+
+```python
+import cinput
+
+# 1. Define your own hex-codes (R, G, B)
+MY_SICK_THEME = {
+    'modal_bg': C_RGB(20, 20, 20),
+    'kbd_bg':   C_RGB(10, 10, 10),
+    'key_bg':   C_RGB(31, 31, 31),
+    'key_spec': C_RGB(50, 0, 0),  # Red special buttons
+    'key_out':  C_BLACK,
+    'txt':      C_WHITE,
+    'txt_dim':  C_RGB(15, 15, 15),
+    'accent':   C_RGB(0, 31, 0),  # TOXIC GREEN!
+    'txt_acc':  C_BLACK,
+    'hl':       C_RGB(0, 15, 0),
+    'check':    C_WHITE
+}
+
+# 2. Register it with the library!
+cinput.THEMES['toxic'] = MY_SICK_THEME
+
+# 3. Pull it out anywhere!
+cinput.pick(["Start"], "Menu", theme="toxic")
+```
+
+---
+
+### The `cinput.ListView` Class
+
+This is the holy grail. Use this class directly if you want to embed a scrollable list inside your own custom loop!
+
+**Initialization**: `ListView(rect, items, row_h=40, theme='light', headers_h=None)`
+
+- **`rect`**: Tuple `(X, Y, W, H)` of the screen bounds.
+- **`items`**: A list of dictionaries `{'text': 'Item', 'type': 'item', 'arrow': True}` or section headers `{'text': 'Settings', 'type': 'section', 'height': 30}`
+- **`update(events)`**: Pass the result of `pollevent()` here. It handles dragging and clicks. It returns `('click', index, item)` if pressed!
+- **`draw()`**: Renders all visible sections instantly.
+
+---
+
+### The `cinput.Keyboard` Class
+
+Don't want `cinput.input()` taking over the whole screen? You can draw the keyboard directly inside your own loops (like what `ced_new.py` does for the text editor).
+
+- **`Keyboard(default_tab=0, enable_tabs=True, numpad_opts=None, theme='light', layout='qwerty')`**
+- **`draw()`**: Draws the grid.
+- **`update(event)`**: Returns the character if a key was pressed, or special flags like `"ENTER"` or `"BACKSPACE"`.
+
+Go drop some code!

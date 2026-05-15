@@ -1,0 +1,64 @@
+---
+title: 1. The Basics
+description: Drop UIs onto your ClassPad instantly.
+---
+
+Yo! Ready to build something sick? This first tutorial walks you through everything from asking the user for text, dropping slick selection menus, and getting confirmations.
+
+Let's hit the ground running.
+
+## 1. Popping Text Inputs
+
+Stop manually drawing on-screen keyboards! Whether you need text, integers, or floating point numbers, `cinput.input()` handles everything, complete with touch-support and smooth themes.
+
+```python
+import cinput
+from gint import *
+
+# Just one line to summon the magical keyboard!
+name = cinput.input("Enter character name:", type="text", theme="dark")
+
+if name:
+    print(f"What's up, {name}!")
+```
+
+![Basic Input Keyboard](../images/input_basic.png)
+
+Need numbers? No sweat. Change `type="text"` to `type="numeric_int"` or `type="numeric_float"`. The keyboard instantly transforms into a clean numpad.
+
+---
+
+## 2. Choosing From Lists
+
+Got multiple options for the user? Use `cinput.pick()`. It pops up a gorgeous, swipeable list box. You can even enable multi-select with checkmarks. 
+
+```python
+options = ["Start Game", "Load Save", "Settings", "Quit"]
+
+# This halts execution until the user picks something.
+choice = cinput.pick(options, "Main Menu", theme="light")
+
+if choice == "Start Game":
+    start_level()
+```
+
+![List Picker Widget](../images/pick_basic.png)
+
+**Pro-Tip:** Turn on `multi=True` in the arguments, and your homies can tap multiple items before hitting OK. 
+
+---
+
+## 3. The 'Are You Sure?' Dialog
+
+You don't want someone accidentally deleting their 100-hour Pokemon save. Throw an elegant confirmation overlay right in their face using `cinput.ask()`.
+
+```python
+sure = cinput.ask("Delete Save?", "This action cannot be undone.", ok_text="DELETE", theme="light")
+
+if sure:
+    delete_everything()
+```
+
+![Confirmation Dialog](../images/confirm.png)
+
+You know the basics! If you're ready to put this into an actual app loop, check out the next tutorial.

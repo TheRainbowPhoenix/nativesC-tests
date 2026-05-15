@@ -1,0 +1,21 @@
+//---
+// Just UI: Compile-time configuration
+//---
+
+#ifndef _JUSTUI_CONFIG
+#define _JUSTUI_CONFIG
+
+#include <gint/config.h>
+
+#define J_VERSION "@JustUI_VERSION@"
+
+#if GINT_HW_CP
+#define J_CONFIG_TOUCH 1
+#else
+#define J_CONFIG_TOUCH 0
+#endif
+
+/* Set to 1 to enable a touch-following widget inspector. */
+#define J_CONFIG_TOUCH_INSPECTOR (J_CONFIG_TOUCH && 0)
+
+#endif /* _JUSTUI_CONFIG */
