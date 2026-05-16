@@ -1,0 +1,9 @@
+{
+    "name": "Marker - v02.01.7002.0001",
+    "patches": [
+        {
+            "file": "mod_marker.bin",
+            "address": "0x8091FED0"
+        }
+    ]
+}

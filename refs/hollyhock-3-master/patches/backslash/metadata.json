@@ -1,0 +1,9 @@
+{
+    "name": "Backslash - v02.01.7002.0001",
+    "patches": [
+        {
+            "file": "patch.bin",
+            "address": "0x80636C50"
+        }
+    ]
+}

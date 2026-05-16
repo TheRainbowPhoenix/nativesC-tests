@@ -1,0 +1,21 @@
+{
+    "name": "Menu Texts - v02.01.7002.0001",
+    "patches": [
+        {
+            "file": "imaginary_unit.bin",
+            "address": "0x808D8DC8"
+        },{
+            "file": "imaginary_unit.bin",
+            "address": "0x808E85CC"
+        },{
+            "file": "imaginary_unit.bin",
+            "address": "0x808F97C8"
+        },{
+            "file": "imaginary_unit.bin",
+            "address": "0x8090A2F0"
+        },{
+            "file": "imaginary_unit.suo.bin",
+            "address": "0x80919224"
+        }
+    ]
+}

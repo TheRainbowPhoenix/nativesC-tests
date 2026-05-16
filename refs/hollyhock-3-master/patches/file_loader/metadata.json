@@ -1,0 +1,9 @@
+{
+    "name": "File Loader - v02.01.7002.0001",
+    "patches": [
+        {
+            "file": "file_loader.bin",
+            "address": "0x80128ff0"
+        }
+    ]
+}

@@ -1,0 +1,71 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+
+        {
+            "name": "2.1.7002 HHK",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "tools\\hollyhock.py",
+            "console": "integratedTerminal",
+            "args": [
+                "extract",
+                "roms/v02.01.7002.0001/OSupdateDLL.dll",
+                "roms/v02.01.7002.0001/fw3069",
+                "roms/v02.01.7002.0001/fw3070"
+            ]
+        }, {
+            "name": "ADR 2.1.7002",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "tools\\hollyhock.py",
+            "console": "integratedTerminal",
+            "args": [
+                "addresses",
+                "search",
+                "roms/v02.01.7001.0000/fw3070",
+                "versions/v02.01.7001.0000/addresses_auto.json",
+                "roms/v02.01.7002.0001/fw3070"
+            ]
+        }, {
+            "name": "Patch 2.1.7002",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "tools\\hollyhock.py",
+            "console": "integratedTerminal",
+            "args": [
+                "patch",
+                "patches",
+                "roms/v02.01.7002.0001/fw3070",
+                "roms/v02.01.7002.0001/hhk3070"
+            ]
+        }, {
+            "name": "Pack 2.1.7002",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "tools\\hollyhock.py",
+            "console": "integratedTerminal",
+            "args": [
+                "pack",
+                "roms/v02.01.7002.0001/hhk3070",
+                "roms/v02.01.7002.0001/3070Patch.bin",
+                "roms/v02.01.7002.0001/OSupdateDLL.dll"
+            ]
+        }, {
+            "name": "AdrApp 2.1.7002",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "tools\\hollyhock.py",
+            "console": "integratedTerminal",
+            "args": [
+                "addresses",
+                "apply",
+                "versions/v02.01.7002.0001/addresses.json",
+                "sdk"
+            ]
+        }
+    ]
+}
