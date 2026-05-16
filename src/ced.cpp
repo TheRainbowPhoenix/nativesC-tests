@@ -1,379 +1,219 @@
 #include "ced.hpp"
-#include "ncinput.hpp"
 #include "filebrowser.hpp"
-#include "goto.hpp"
 #include "search.hpp"
+#include "goto.hpp"
 #include "outline.hpp"
 #include "problems.hpp"
 extern "C" {
 #include <justui/jlayout.h>
 #include <justui/jlabel.h>
 #include <justui/jbutton.h>
-}
 #include <gint/display.h>
 #include <gint/keyboard.h>
-#include <fstream>
-#include <sstream>
-#include <cctype>
+#include <cstring>
 #include <cstdio>
-
-#ifndef C_MAGENTA
-#define C_MAGENTA 0xf81f
-#endif
-
-extern "C" {
-    void __cxa_pure_virtual() { while (1); }
-    void __cxa_guard_acquire(void*) { }
-    void __cxa_guard_release(void*) { }
-    void __cxa_guard_abort(void*) { }
-
-    void _free(void* ptr) { free(ptr); }
-    void* _malloc(size_t sz) { return malloc(sz); }
-    void* _realloc(void* ptr, size_t sz) { return realloc(ptr, sz); }
-
-    void __ZSt20__throw_length_errorPKc(char const*) { while(1); }
-    void __ZSt19__throw_logic_errorPKc(char const*) { while(1); }
-    void __ZSt20__throw_out_of_rangePKc(char const*) { while(1); }
-    void __ZSt24__throw_out_of_range_fmtPKcz(char const*, ...) { while(1); }
-    void __ZSt28__throw_bad_array_new_lengthv() { while(1); }
 }
-
-void* operator new(size_t size) { return malloc(size); }
-void* operator new[](size_t size) { return malloc(size); }
-void operator delete(void* ptr) noexcept { free(ptr); }
-void operator delete[](void* ptr) noexcept { free(ptr); }
-void operator delete(void* ptr, size_t) noexcept { free(ptr); }
-void operator delete[](void* ptr, size_t) noexcept { free(ptr); }
 
 namespace ced {
 
-Editor::Editor() : filename("untitled.py"), cx(0), cy(0), vy(0), total_lines(1), current_theme(ncinput::ThemeName::Light), word_wrap(false), running(true) {
-    scene = jscene_create_fullscreen(nullptr);
+void to_os_path(const char* src, uint16_t* dest, int max_len) {
+    int i = 0;
+    while (src[i] && i < max_len - 1) {
+        dest[i] = (uint8_t)src[i];
+        i++;
+    }
+    dest[i] = 0;
 }
 
-Editor::~Editor() {
-    jwidget_destroy((jwidget*)scene);
+FileHandle::FileHandle() : fd(-1) {}
+FileHandle::~FileHandle() { close(); }
+
+bool FileHandle::open(const char* path, int mode) {
+    close();
+    uint16_t os_path[128];
+    to_os_path(path, os_path, 128);
+    gint_world_switch();
+    fd = BFile_Open(os_path, mode);
+    gint_world_switch();
+    return fd >= 0;
 }
+
+void FileHandle::close() {
+    if (fd >= 0) {
+        gint_world_switch();
+        BFile_Close(fd);
+        gint_world_switch();
+        fd = -1;
+    }
+}
+
+int FileHandle::size() {
+    if (fd < 0) return -1;
+    gint_world_switch();
+    int s = BFile_Size(fd);
+    gint_world_switch();
+    return s;
+}
+
+int FileHandle::read(void* data, int sz, int whence) {
+    if (fd < 0) return -1;
+    gint_world_switch();
+    int r = BFile_Read(fd, data, sz, whence);
+    gint_world_switch();
+    return r;
+}
+
+int FileHandle::write(const void* data, int sz) {
+    if (fd < 0) return -1;
+    gint_world_switch();
+    int r = BFile_Write(fd, data, sz);
+    gint_world_switch();
+    return r;
+}
+
+int FileHandle::seek(int offset) {
+    if (fd < 0) return -1;
+    gint_world_switch();
+    int r = BFile_Seek(fd, offset);
+    gint_world_switch();
+    return r;
+}
+
+Editor::Editor() : total_lines(0), vy(0), cx(0), cy(0), current_theme(ncinput::ThemeName::Light), word_wrap(false), running(true) {
+    filename[0] = '\0';
+    for (int i = 0; i < CACHE_SIZE; i++) cache[i].index = -1;
+    for (int i = 0; i < TOKEN_CACHE_LINES; i++) tok_cache[i].index = -1;
+    timer_ticks = 0;
+    scene = (jscene*)jscene_create_fullscreen(nullptr);
+    jlayout_set_vbox((jwidget*)scene)->spacing = 0;
+}
+
+Editor::~Editor() { if (scene) jwidget_destroy((jwidget*)scene); }
 
 void Editor::load_config() {
-    std::ifstream f(".ced");
-    if (f.is_open()) {
-        std::string line;
-        while (std::getline(f, line)) {
-            if (line == "theme=dark") current_theme = ncinput::ThemeName::Dark;
-            else if (line == "theme=grey") current_theme = ncinput::ThemeName::Grey;
-            else if (line == "wrap=on") word_wrap = true;
+    FileHandle cfg;
+    if (cfg.open("\\\\fls0\\.ced", BFile_ReadOnly)) {
+        char buf[256]; int r = cfg.read(buf, 255);
+        if (r > 0) {
+            buf[r] = '\0';
+            if (strstr(buf, "theme=dark")) current_theme = ncinput::ThemeName::Dark;
+            else if (strstr(buf, "theme=grey")) current_theme = ncinput::ThemeName::Grey;
+            if (strstr(buf, "wrap=true")) word_wrap = true;
         }
     }
 }
 
-void Editor::load_file(std::string const& path) {
-    if (file_handle.is_open()) file_handle.close();
-    file_handle.open(path, std::ios::binary);
-    if (file_handle.is_open()) {
-        filename = path;
-        total_lines = 0;
-        line_offsets.clear();
-        lines.clear();
-        line_loaded.clear();
-        loaded_indices.clear();
-        token_cache.clear();
-        std::string line;
-        while (true) {
-            line_offsets.push_back(file_handle.tellg());
-            if (!std::getline(file_handle, line)) break;
-            lines.push_back("");
-            line_loaded.push_back(false);
-            total_lines++;
+void Editor::load_file(const char* path) {
+    if (!file.open(path, BFile_ReadOnly)) {
+        ncinput::ask("Error", "Could not open file.", "OK", "Cancel", current_theme);
+        return;
+    }
+    strncpy(filename, path, sizeof(filename)-1); filename[sizeof(filename)-1] = '\0';
+    total_lines = 0; line_offsets[0] = 0; total_lines = 1;
+    char buf[1024]; int bytes_read; int current_pos = 0;
+    while ((bytes_read = file.read(buf, sizeof(buf), current_pos)) > 0) {
+        for (int i = 0; i < bytes_read; i++) {
+            if (buf[i] == '\n') { if (total_lines < MAX_LINES) line_offsets[total_lines++] = current_pos + i + 1; }
         }
-        if (total_lines == 0) {
-            total_lines = 1;
-            line_offsets.push_back(0);
-            lines.push_back("");
-            line_loaded.push_back(true);
-        }
-        cx = cy = vy = 0;
+        current_pos += bytes_read;
+    }
+    vy = 0; cx = 0; cy = 0;
+    for (int i = 0; i < CACHE_SIZE; i++) cache[i].index = -1;
+    for (int i = 0; i < TOKEN_CACHE_LINES; i++) tok_cache[i].index = -1;
+}
+
+char* Editor::get_line(int index) {
+    if (index < 0 || index >= total_lines) return nullptr;
+    for (int i = 0; i < CACHE_SIZE; i++) { if (cache[i].index == index) { cache[i].last_used = ++timer_ticks; return cache[i].text; } }
+    int oldest = 0; for (int i = 0; i < CACHE_SIZE; i++) { if (cache[i].last_used < cache[oldest].last_used) oldest = i; }
+    int offset = line_offsets[index];
+    int next_offset = (index + 1 < total_lines) ? line_offsets[index + 1] : file.size();
+    int len = next_offset - offset; if (len >= MAX_LINE_LEN) len = MAX_LINE_LEN - 1;
+    cache[oldest].index = index; cache[oldest].last_used = ++timer_ticks;
+    int r = file.read(cache[oldest].text, len, offset); if (r < 0) r = 0;
+    cache[oldest].text[r] = '\0';
+    for (int i = 0; i < r; i++) { if (cache[oldest].text[i] == '\r' || cache[oldest].text[i] == '\n') { cache[oldest].text[i] = '\0'; break; } }
+    return cache[oldest].text;
+}
+
+static bool is_py_keyword(const char* s, int len) {
+    static const char* kw[] = {"def", "class", "if", "else", "elif", "for", "while", "return", "import", "from", "as", "try", "except", "finally", "with", "pass", "break", "continue", "None", "True", "False"};
+    for (size_t i = 0; i < sizeof(kw)/sizeof(kw[0]); i++) { if ((int)strlen(kw[i]) == len && strncmp(s, kw[i], len) == 0) return true; }
+    return false;
+}
+
+void Editor::update_tokens(int line_idx, const char* line) {
+    int cache_idx = line_idx % TOKEN_CACHE_LINES; if (tok_cache[cache_idx].index == line_idx) return;
+    tok_cache[cache_idx].index = line_idx; tok_cache[cache_idx].count = 0;
+    int i = 0;
+    while (line[i] && tok_cache[cache_idx].count < MAX_TOKENS_PER_LINE) {
+        while (line[i] && isspace(line[i])) i++; if (!line[i]) break;
+        int start = i; int color = C_BLACK;
+        if (line[i] == '#') { tok_cache[cache_idx].tokens[tok_cache[cache_idx].count++] = {start, (int)strlen(line + start), C_RGB(0, 15, 0)}; break; }
+        else if (line[i] == '"' || line[i] == '\'') { char quote = line[i++]; while (line[i] && line[i] != quote) { if (line[i] == '\\' && line[i+1]) i++; i++; } if (line[i]) i++; color = C_RGB(15, 8, 0); }
+        else if (isdigit(line[i])) { while (line[i] && (isdigit(line[i]) || line[i] == '.')) i++; color = C_RGB(0, 0, 15); }
+        else if (isalpha(line[i]) || line[i] == '_') { while (line[i] && (isalnum(line[i]) || line[i] == '_')) i++; if (is_py_keyword(line + start, i - start)) color = C_RGB(15, 0, 15); else color = C_BLACK; }
+        else { i++; color = C_BLACK; }
+        tok_cache[cache_idx].tokens[tok_cache[cache_idx].count++] = {start, i - start, color};
     }
 }
 
-static std::string EMPTY_LINE = "";
-std::string& Editor::get_line(int index) {
-    if (index < 0 || index >= total_lines) return EMPTY_LINE;
-    if (line_loaded[index]) return lines[index];
-
-    file_handle.clear();
-    file_handle.seekg(line_offsets[index]);
-    std::getline(file_handle, lines[index]);
-    line_loaded[index] = true;
-    loaded_indices.push_back(index);
-
-    // Evict old lines if there are too many loaded (O(1)ish eviction)
-    if (loaded_indices.size() > 500) {
-        size_t to_evict = loaded_indices.size() - 400;
-        for (size_t k = 0; k < to_evict; ++k) {
-            int idx = loaded_indices[k];
-            // Don't evict what's near the viewport
-            if (idx < vy - 50 || idx > vy + 50) {
-                lines[idx].clear();
-                lines[idx].shrink_to_fit();
-                line_loaded[idx] = false;
-                token_cache.erase(idx);
-            }
-        }
-        loaded_indices.erase(loaded_indices.begin(), loaded_indices.begin() + to_evict);
+void Editor::draw_line(int x, int y, int line_idx, const char* line) {
+    update_tokens(line_idx, line); int cache_idx = line_idx % TOKEN_CACHE_LINES;
+    int cur_x = x, last_pos = 0;
+    for (int i = 0; i < tok_cache[cache_idx].count; i++) {
+        Token& t = tok_cache[cache_idx].tokens[i];
+        if (t.start > last_pos) { char tmp[MAX_LINE_LEN]; int len = t.start - last_pos; strncpy(tmp, line + last_pos, len); tmp[len] = '\0'; dtext(cur_x, y, C_BLACK, tmp); int w; dsize(tmp, nullptr, &w, nullptr); cur_x += w; }
+        char tmp[MAX_LINE_LEN]; strncpy(tmp, line + t.start, t.len); tmp[t.len] = '\0'; dtext(cur_x, y, t.color, tmp); int w; dsize(tmp, nullptr, &w, nullptr); cur_x += w;
+        last_pos = t.start + t.len;
     }
-
-    return lines[index];
+    if (line[last_pos]) dtext(cur_x, y, C_BLACK, line + last_pos);
 }
-
-void Editor::save_file(std::string const& path) {
-    std::string target = path.empty() ? filename : path;
-    bool is_save_as = !path.empty() || target == "untitled.py";
-
-    if (target == "untitled.py") {
-        target = ncinput::input("Save as:", "alpha_numeric", current_theme);
-        if (target.empty()) return;
-    }
-
-    if (is_save_as) {
-        std::ifstream check(target);
-        if (check.good()) {
-            check.close();
-            if (!ncinput::ask("Overwrite?", "File already exists. Overwrite?", "Yes", "No", current_theme)) {
-                return;
-            }
-        }
-    }
-
-    std::string temp_target = target + ".tmp";
-    std::ofstream f(temp_target, std::ios::binary);
-    if (f.is_open()) {
-        for (int i = 0; i < total_lines; ++i) {
-            f << get_line(i) << "\n";
-        }
-        f.close();
-
-        // Close source handle before renaming
-        if (file_handle.is_open()) file_handle.close();
-
-        std::remove(target.c_str());
-        std::rename(temp_target.c_str(), target.c_str());
-
-        filename = target;
-        load_file(filename); // Re-initialize with new offsets
-    }
-}
-
-void Editor::do_menu() {
-    std::vector<std::string> opts = {
-        "New", "Open", "Save", "Save As",
-        "Search", "Replace", "Go To", "Outline", "Problems",
-        "Theme", "Quit"
-    };
-    std::string choice = ncinput::pick(opts, "Menu", current_theme);
-    if (choice == "New") {
-        filename = "untitled.py"; total_lines = 1; cx = cy = vy = 0;
-    } else if (choice == "Open") {
-        std::string path = filebrowser::browse("Open File", current_theme);
-        if (!path.empty()) load_file(path);
-    } else if (choice == "Save") {
-        save_file();
-    } else if (choice == "Save As") {
-        save_file("");
-    } else if (choice == "Search") {
-        SearchResult res = show_search(filename, current_theme);
-        if (res.line != -1) {
-            cy = res.line; cx = res.col;
-            if (cy < vy || cy >= vy + 20) vy = cy - 5;
-            if (vy < 0) vy = 0;
-        }
-    } else if (choice == "Replace") {
-        show_replace(filename, current_theme);
-        load_file(filename); // Reload to update line count etc
-    } else if (choice == "Go To") {
-        int line = show_goto(total_lines, current_theme);
-        if (line != -1) {
-            cy = line; cx = 0;
-            if (cy < vy || cy >= vy + 20) vy = cy - 5;
-            if (vy < 0) vy = 0;
-        }
-    } else if (choice == "Outline") {
-        int line = show_outline(filename, current_theme);
-        if (line != -1) {
-            cy = line; cx = 0;
-            if (cy < vy || cy >= vy + 20) vy = cy - 5;
-            if (vy < 0) vy = 0;
-        }
-    } else if (choice == "Problems") {
-        show_problems(filename, current_theme);
-    } else if (choice == "Theme") {
-        if (current_theme == ncinput::ThemeName::Light) current_theme = ncinput::ThemeName::Dark;
-        else if (current_theme == ncinput::ThemeName::Dark) current_theme = ncinput::ThemeName::Grey;
-        else current_theme = ncinput::ThemeName::Light;
-    } else if (choice == "Quit") {
-        running = false;
-    }
-}
-
-static const std::vector<std::string> py_keywords = {
-    "def", "class", "if", "else", "elif", "while", "for", "import", "from",
-    "return", "True", "False", "None", "break", "continue", "pass", "try",
-    "except", "with", "as", "global", "print", "len", "range", "in", "is",
-    "not", "and", "or"
-};
-
-std::vector<Editor::Token> const& Editor::tokenize(int line_idx, std::string const& line) {
-    if (token_cache.count(line_idx)) return token_cache[line_idx];
-
-    std::vector<Token> tokens;
-    auto const& t = ncinput::get_theme(current_theme);
-
-    int col_kw = C_BLUE;
-    int col_str = C_RGB(0, 128, 0);
-    int col_com = C_RGB(128, 128, 128);
-    int col_num = C_RED;
-    int col_op = C_MAGENTA;
-
-    if (current_theme == ncinput::ThemeName::Dark) {
-        col_kw = C_RGB(76, 127, 255);
-        col_str = C_RGB(134, 102, 255); // Actually light green in py, but let's follow
-    }
-
-    size_t i = 0;
-    while (i < line.length()) {
-        char c = line[i];
-        if (c == '#') {
-            tokens.push_back({line.substr(i), col_com});
-            break;
-        } else if (c == '"' || c == '\'') {
-            size_t start = i++;
-            while (i < line.length() && line[i] != c) i++;
-            if (i < line.length()) i++;
-            tokens.push_back({line.substr(start, i - start), col_str});
-        } else if (isspace(c)) {
-            size_t start = i++;
-            while (i < line.length() && isspace(line[i])) i++;
-            tokens.push_back({line.substr(start, i - start), t.txt});
-        } else if (isdigit(c)) {
-            size_t start = i++;
-            while (i < line.length() && isdigit(line[i])) i++;
-            tokens.push_back({line.substr(start, i - start), col_num});
-        } else if (isalpha(c) || c == '_') {
-            size_t start = i++;
-            while (i < line.length() && (isalnum(line[i]) || line[i] == '_')) i++;
-            std::string word = line.substr(start, i - start);
-            int color = t.txt;
-            for (auto const& kw : py_keywords) if (kw == word) { color = col_kw; break; }
-            tokens.push_back({word, color});
-        } else {
-            tokens.push_back({std::string(1, c), col_op});
-            i++;
-        }
-    }
-    token_cache[line_idx] = tokens;
-    return token_cache[line_idx];
-}
-
-void Editor::draw_line(int x, int y, int line_idx, std::string const& line) {
-    auto const& tokens = tokenize(line_idx, line);
-    int cur_x = x;
-    for (auto const& tok : tokens) {
-        dtext(cur_x, y, tok.color, tok.text.c_str());
-        int w, h;
-        dsize(tok.text.c_str(), dfont_default(), &w, &h);
-        cur_x += w;
-    }
-}
-
 
 void Editor::render() {
-    auto const& t = ncinput::get_theme(current_theme);
-    dclear(t.modal_bg);
-
-    int y = 45;
-    for (int i = vy; i < total_lines && y < 528; ++i) {
-        std::string& line = get_line(i);
+    ncinput::Theme const& t = ncinput::get_theme(current_theme); dclear(t.modal_bg); int y = 5;
+    for (int i = vy; i < vy + 12 && i < total_lines; i++) {
+        const char* line = get_line(i); if (!line) line = "";
+        if (i == cy) drect(0, y, 320, y + 18, t.hl);
         draw_line(5, y, i, line);
         if (i == cy) {
-            int cw, ch;
-            dnsize(line.c_str(), cx, dfont_default(), &cw, &ch);
+            int cw = 0; if (cx > 0) { char tmp[MAX_LINE_LEN]; int len = (cx < (int)strlen(line)) ? cx : (int)strlen(line); strncpy(tmp, line, len); tmp[len] = '\0'; dnsize(tmp, len, nullptr, &cw, nullptr); }
             drect(5 + cw, y, 5 + cw + 1, y + 18, t.txt);
         }
         y += 20;
     }
-
-    // Header
-    drect(0, 0, 320, 40, t.accent);
-    dtext_opt(160, 20, t.txt_acc, C_NONE, DTEXT_CENTER, DTEXT_MIDDLE, filename.c_str(), -1);
 }
 
-void Editor::run() {
-    load_config();
-    while (running) {
-        render();
-        dupdate();
-
-        key_event_t e = getkey();
-        if (e.key == KEY_MENU) {
-            do_menu();
-        } else if (e.key == KEY_UP) {
-            if (cy > 0) {
-                cy--;
-                if (cy < vy) vy = cy;
-            }
-        } else if (e.key == KEY_DOWN) {
-            if (cy < total_lines - 1) {
-                cy++;
-                if (cy >= vy + 20) vy = cy - 19;
-            }
-        } else if (e.key == KEY_LEFT) {
-            if (cx > 0) cx--;
-        } else if (e.key == KEY_RIGHT) {
-            std::string line = get_line(cy);
-            if (cx < (int)line.length()) cx++;
-        } else if (e.key >= ' ' && e.key <= '~') {
-            // Basic character input
-            std::string& line = get_line(cy);
-            line.insert(cx, 1, (char)e.key);
-            token_cache.erase(cy);
-            cx++;
-        } else if (e.key == KEY_DEL) {
-            std::string& line = get_line(cy);
-            if (cx > 0) {
-                line.erase(cx - 1, 1);
-                token_cache.erase(cy);
-                cx--;
-            } else if (cy > 0) {
-                // Join with previous line
-                std::string current = get_line(cy);
-                std::string& prev = get_line(cy - 1);
-                cx = prev.length();
-                prev += current;
-                lines.erase(lines.begin() + cy);
-                line_loaded.erase(line_loaded.begin() + cy);
-                line_offsets.erase(line_offsets.begin() + cy);
-                total_lines--;
-                token_cache.clear();
-                cy--;
-            }
-        } else if (e.key == KEY_EXE) {
-            // New line
-            std::string& line = get_line(cy);
-            std::string rem = line.substr(cx);
-            line = line.substr(0, cx);
-            token_cache.erase(cy);
-
-            cy++;
-            total_lines++;
-            lines.insert(lines.begin() + cy, rem);
-            line_loaded.insert(line_loaded.begin() + cy, true);
-            line_offsets.insert(line_offsets.begin() + cy, 0);
-            token_cache.clear();
-            cx = 0;
-        } else if (e.key == KEY_EXIT) {
-            running = false;
-        }
+void Editor::do_menu() {
+    const char* options[] = {"Open File", "Save File", "Search", "Go To", "Outline", "Problems", "Exit"};
+    int choice = ncinput::pick(options, 7, "Menu", current_theme);
+    switch (choice) {
+        case 0: { char path[128]; if (filebrowser::show(path, current_theme)) load_file(path); break; }
+        case 1: save_file(); break;
+        case 2: search::show(this, current_theme); break;
+        case 3: { int target = goto_line::show(total_lines, current_theme); if (target >= 0) { cy = target; if (cy < vy) vy = cy; if (cy >= vy + 12) vy = cy - 11; } break; }
+        case 4: { int target = outline::show(filename, current_theme); if (target >= 0) { cy = target; if (cy < vy) vy = cy; if (cy >= vy + 12) vy = cy - 11; } break; }
+        case 5: problems::show(current_theme); break;
+        case 6: running = false; break;
     }
 }
 
-} // namespace ced
+void Editor::run() {
+    while (running) {
+        render(); dupdate();
+        key_event_t e = getkey();
+        if (e.key == KEY_MENU) do_menu();
+        else if (e.key == KEY_UP) { if (cy > 0) cy--; if (cy < vy) vy = cy; }
+        else if (e.key == KEY_DOWN) { if (cy < total_lines - 1) cy++; if (cy >= vy + 12) vy++; }
+        else if (e.key == KEY_LEFT) { if (cx > 0) cx--; }
+        else if (e.key == KEY_RIGHT) { const char* l = get_line(cy); if (l && cx < (int)strlen(l)) cx++; }
+        else if (e.key == KEY_EXIT) running = false;
+    }
+}
+
+void Editor::save_file(const char* path) {
+    if (strlen(filename) == 0 && path == nullptr) { ncinput::ask("Error", "No file to save.", "OK", "Cancel", current_theme); return; }
+    ncinput::ask("Save", "Save is limited to rewriting existing files on Fugue FS.", "OK", "Cancel", current_theme);
+}
+
+}

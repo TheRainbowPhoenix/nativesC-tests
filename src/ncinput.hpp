@@ -1,20 +1,13 @@
 #pragma once
 
-#include <gint/display.h>
-#include <gint/keyboard.h>
-extern "C" {
-#include <justui/jwidget.h>
-}
-
 #ifdef swap
 #undef swap
 #endif
 
-#include <string>
-#include <vector>
-#include <map>
-
 extern "C" {
+#include <gint/display.h>
+#include <gint/keyboard.h>
+#include <justui/jwidget.h>
 #include <justui/jscrolledlist.h>
 #include <justui/jlabel.h>
 }
@@ -45,9 +38,13 @@ Theme const& get_theme(ThemeName name);
 
 void init();
 
-// Public API matching cinput.py
-std::string input(std::string const& prompt = "Input:", std::string const& type = "alpha_numeric", ThemeName theme = ThemeName::Light);
-std::string pick(std::vector<std::string> const& options, std::string const& prompt = "Select:", ThemeName theme = ThemeName::Light, bool multi = false);
-bool ask(std::string const& title, std::string const& body, std::string const& ok_text = "OK", std::string const& cancel_text = "Cancel", ThemeName theme = ThemeName::Light);
+// Public API avoiding STL
+// Returns 0 on success, -1 on cancel
+int input(char* buffer, int max_len, const char* prompt = "Input:", const char* type = "alpha_numeric", ThemeName theme = ThemeName::Light);
+
+// Returns index of selection, -1 on cancel
+int pick(const char** options, int num_options, const char* prompt = "Select:", ThemeName theme = ThemeName::Light);
+
+bool ask(const char* title, const char* body, const char* ok_text = "OK", const char* cancel_text = "Cancel", ThemeName theme = ThemeName::Light);
 
 } // namespace ncinput

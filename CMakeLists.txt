@@ -20,6 +20,7 @@ set(SOURCES
   src/search.cpp
   src/outline.cpp
   src/problems.cpp
+  src/stubs.cpp
 )
 # Shared assets, fx-9860G-only assets and fx-CG-50-only assets
 set(ASSETS

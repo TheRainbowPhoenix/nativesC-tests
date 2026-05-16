@@ -1,17 +1,20 @@
 #include "goto.hpp"
-#include <string>
+#include <cstdlib>
+#include <cstdio>
 
-namespace ced {
+namespace goto_line {
 
-int show_goto(int max_lines, ncinput::ThemeName theme) {
-    std::string res = ncinput::input("Go to line (1-" + std::to_string(max_lines) + "):", "numeric_int", theme);
-    if (res.empty()) return -1;
-    char *endptr;
-    long line = std::strtol(res.c_str(), &endptr, 10);
-    if (*endptr != '\0') return -1;
-    if (line < 1) line = 1;
-    if (line > max_lines) line = max_lines;
-    return (int)line - 1;
+int show(int max_lines, ncinput::ThemeName theme) {
+    char buf[16] = {0};
+    char prompt[32];
+    sprintf(prompt, "Go to (1-%d):", max_lines);
+    if (ncinput::input(buf, 16, prompt, "numeric_int", theme) == 0) {
+        int line = atoi(buf);
+        if (line < 1) line = 1;
+        if (line > max_lines) line = max_lines;
+        return line - 1;
+    }
+    return -1;
 }
 
 }

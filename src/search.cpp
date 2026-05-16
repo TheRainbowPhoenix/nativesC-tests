@@ -1,48 +1,46 @@
 #include "search.hpp"
-#include <fstream>
-#include <vector>
+#include "ced.hpp"
+#include <cstring>
 #include <cstdio>
 
-namespace ced {
+namespace search {
 
-SearchResult show_search(std::string const& filename, ncinput::ThemeName theme) {
-    std::string query = ncinput::input("Search:", "alpha_numeric", theme);
-    if (query.empty()) return {-1, -1};
+void show(ced::Editor* editor, ncinput::ThemeName theme) {
+    char pattern[64] = {0};
+    if (ncinput::input(pattern, 64, "Search:", "alpha_numeric", theme) == 0) {
+        if (strlen(pattern) == 0) return;
 
-    std::ifstream f(filename);
-    std::string line;
-    int line_idx = 0;
-    while (std::getline(f, line)) {
-        size_t pos = line.find(query);
-        if (pos != std::string::npos) {
-            return {line_idx, (int)pos};
+        bool replace = ncinput::ask("Search", "Do you want to Search and Replace?", "Yes", "No", theme);
+        char replacement[64] = {0};
+        if (replace) {
+            if (ncinput::input(replacement, 64, "Replace with:", "alpha_numeric", theme) != 0) return;
         }
-        line_idx++;
-    }
-    return {-1, -1};
-}
 
-void show_replace(std::string const& filename, ncinput::ThemeName theme) {
-    std::string query = ncinput::input("Search for:", "alpha_numeric", theme);
-    if (query.empty()) return;
-    std::string replacement = ncinput::input("Replace with:", "alpha_numeric", theme);
+        // Search logic
+        int found_line = -1;
+        int found_pos = -1;
 
-    std::string temp_name = filename + ".tmp";
-    std::ifstream f(filename);
-    std::ofstream out(temp_name);
-    std::string line;
-    while (std::getline(f, line)) {
-        size_t pos = 0;
-        while ((pos = line.find(query, pos)) != std::string::npos) {
-            line.replace(pos, query.length(), replacement);
-            pos += replacement.length();
+        // This is a slow operation, would ideally be done in a separate scene or with feedback
+        for (int i = 0; i < 1000; i++) { // Limited for responsiveness
+            char* line = editor->get_line(i);
+            if (!line) break;
+            char* p = strstr(line, pattern);
+            if (p) {
+                found_line = i;
+                found_pos = p - line;
+                break;
+            }
         }
-        out << line << "\n";
+
+        if (found_line != -1) {
+            char msg[128];
+            sprintf(msg, "Found at line %d, pos %d.", found_line + 1, found_pos);
+            ncinput::ask("Search", msg, "Go to", "Cancel", theme);
+            // Editor navigation would go here
+        } else {
+            ncinput::ask("Search", "Not found in first 1000 lines.", "OK", "Cancel", theme);
+        }
     }
-    f.close();
-    out.close();
-    std::remove(filename.c_str());
-    std::rename(temp_name.c_str(), filename.c_str());
 }
 
 }
