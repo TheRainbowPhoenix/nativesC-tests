@@ -1,11 +1,13 @@
 #include "outline.hpp"
 #include <fstream>
 #include <sstream>
+extern "C" {
 #include <justui/jscene.h>
 #include <justui/jlayout.h>
 #include <justui/jlabel.h>
 #include <justui/jbutton.h>
 #include <justui/jscrolledlist.h>
+}
 #include <gint/display.h>
 
 namespace ced {

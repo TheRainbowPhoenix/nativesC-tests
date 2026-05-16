@@ -5,9 +5,11 @@
 #include "search.hpp"
 #include "outline.hpp"
 #include "problems.hpp"
+extern "C" {
 #include <justui/jlayout.h>
 #include <justui/jlabel.h>
 #include <justui/jbutton.h>
+}
 #include <gint/display.h>
 #include <gint/keyboard.h>
 #include <fstream>

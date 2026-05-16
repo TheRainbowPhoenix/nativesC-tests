@@ -1,8 +1,10 @@
 #include "problems.hpp"
+extern "C" {
 #include <justui/jscene.h>
 #include <justui/jlayout.h>
 #include <justui/jlabel.h>
 #include <justui/jbutton.h>
+}
 #include <gint/display.h>
 
 namespace ced {

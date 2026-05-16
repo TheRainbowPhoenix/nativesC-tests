@@ -2,7 +2,9 @@
 
 #include <gint/display.h>
 #include <gint/keyboard.h>
+extern "C" {
 #include <justui/jwidget.h>
+}
 
 #ifdef swap
 #undef swap
@@ -12,8 +14,10 @@
 #include <vector>
 #include <map>
 
+extern "C" {
 #include <justui/jscrolledlist.h>
 #include <justui/jlabel.h>
+}
 
 namespace ncinput {
 

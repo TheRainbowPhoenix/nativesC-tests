@@ -1,9 +1,11 @@
 #include "ncinput.hpp"
+extern "C" {
 #include <justui/jwidget-api.h>
 #include <justui/jlabel.h>
 #include <justui/jbutton.h>
 #include <justui/jlayout.h>
 #include <justui/jscene.h>
+}
 #include <gint/display.h>
 #include <gint/keyboard.h>
 #include <vector>
@@ -435,7 +437,9 @@ std::string input(std::string const& prompt, std::string const& type, ThemeName 
     return cancelled ? "" : result;
 }
 
+extern "C" {
 #include <justui/jscrolledlist.h>
+}
 #include <cstdio>
 
 // Helper for pick() - must be outside to be accessible by capture-less lambdas

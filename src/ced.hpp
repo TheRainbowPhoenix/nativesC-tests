@@ -1,9 +1,12 @@
 #pragma once
-#include <justui/jscene.h>
 
 #ifdef swap
 #undef swap
 #endif
+
+extern "C" {
+#include <justui/jscene.h>
+}
 
 #include <string>
 #include <vector>
@@ -11,7 +14,6 @@
 #include <fstream>
 #include <ios>
 #include <cstdio>
-#include <justui/jscene.h>
 #include "ncinput.hpp"
 
 namespace ced {
