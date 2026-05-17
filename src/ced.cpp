@@ -27,7 +27,7 @@ Editor::Editor() : m_modified(false), m_cx(0), m_cy(0), m_vx(0), m_vy(0), m_line
     String_Strcpy(m_config.theme, "light");
 }
 
-Editor::~Editor() { clear_lines(); if (m_fd >= 0) { File_Error res = File_Close(m_fd); (void)res; } if (m_keyboard) delete m_keyboard; }
+Editor::~Editor() { clear_lines(); if (m_fd >= 0) { (void)File_Close(m_fd); } if (m_keyboard) delete m_keyboard; }
 
 bool Editor::init() {
     (void)load_config();
@@ -41,10 +41,7 @@ bool Editor::init() {
         File_Error cres = File_Close(fd); (void)cres;
     }
 
-    if (!load_file("\\\\fls0\\untitled.py")) {
-        if (m_line_count == 0) (void)add_line_info(0, 0);
-    }
-    return true;
+    return load_file("\\\\fls0\\untitled.py");
 }
 
 bool Editor::load_config() {
@@ -138,7 +135,17 @@ void Editor::handle_input() {
             (void)ncinput::pick(menu_opts, 4, "Menu", m_config.theme);
         }
         if (m_keyboard->is_visible() && ty >= m_keyboard->get_y()) {
-            (void)m_keyboard->handle_event(ev);
+            const char* res = m_keyboard->handle_event(ev);
+            if (res) {
+                if (String_Strcmp(res, "BACKSPACE") == 0) {
+                    if (m_cx > 0) m_cx--;
+                } else if (String_Strcmp(res, "ENTER") == 0) {
+                    m_cy++; m_cx = 0;
+                } else if (String_Strlen(res) == 1) {
+                    m_cx++;
+                }
+                m_modified = true;
+            }
         }
     }
     if (ev.type == EVENT_KEY && ev.data.key.direction == KEY_PRESSED) {

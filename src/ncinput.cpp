@@ -120,27 +120,36 @@ char* input(const char* prompt, InputType type, const char* theme_name, const ch
 int pick(const char** options, size_t count, const char* prompt, const char* theme_name) {
     (void)theme_name;
     nui::NDialog dlg(nui::NDialog::Height95, prompt);
+    nui::NButton close_btn(10, 10, 40, 35, "X", 99);
+    dlg.AddElement(close_btn);
+
     nui::NButton* btns[10];
     int n = (int)count; if (n > 10) n = 10;
     for (int i = 0; i < n; i++) {
-        btns[i] = new nui::NButton(dlg.GetLeftX() + 10, dlg.GetTopY() + 40 + i * 35, dlg.GetLeftX() + 250, dlg.GetTopY() + 70 + i * 35, options[i], i);
+        btns[i] = new nui::NButton(40, 60 + i * 40, 280, 95 + i * 40, options[i], i);
         dlg.AddElement(*btns[i]);
     }
 
     int result = -1;
     while (true) {
-        nrender::fill_rect(20, dlg.GetTopY(), 300, 528, 0xEF7D);
-        nrender::fill_rect(20, dlg.GetTopY(), 300, dlg.GetTopY() + 30, 0x001F);
-        nrender::draw_text(30, dlg.GetTopY() + 8, prompt, 0xFFFF, nrender::pSystemFont1);
+        nrender::fill_rect(0, 0, 320, 528, 0xEF7D);
+        nrender::fill_rect(0, 0, 320, 45, 0x001F);
+        close_btn.render();
+        int tw = nrender::get_text_width(prompt, nrender::pSystemFont1);
+        nrender::draw_text(160 - tw/2, 15, prompt, 0xFFFF, nrender::pSystemFont1);
         for (int i = 0; i < n; i++) btns[i]->render();
         LCD_Refresh();
         struct Input_Event ev;
         Mem_Memset(&ev, 0, sizeof(ev));
         if (GetInput(&ev, 0xFFFFFFFF, 0x10) == 0) {
             if (ev.type == EVENT_TOUCH) {
-                for (int i = 0; i < n; i++) btns[i]->handle_touch(ev.data.touch_single.p1_x, ev.data.touch_single.p1_y, (int)ev.data.touch_single.direction);
+                int tx = ev.data.touch_single.p1_x; int ty = ev.data.touch_single.p1_y;
+                int act = (int)ev.data.touch_single.direction;
+                close_btn.handle_touch(tx, ty, act);
+                for (int i = 0; i < n; i++) btns[i]->handle_touch(tx, ty, act);
             }
             if (ev.type == EVENT_KEY && (ev.data.key.keyCode == KEYCODE_POWER_CLEAR || ev.data.key.keyCode == KEYCODE_POWER)) break;
+            if (close_btn.is_clicked()) break;
             for (int i = 0; i < n; i++) {
                 if (btns[i]->is_clicked()) { result = i; goto done; }
             }

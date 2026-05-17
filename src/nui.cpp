@@ -15,7 +15,8 @@ NButton::NButton(int x1, int y1, int x2, int y2, const char* text, int id) : m_x
 void NButton::render() {
     uint16_t bg = m_pressed ? 0xAD55 : 0xFFFF;
     nrender::fill_rect(m_x1, m_y1, m_x2, m_y2, bg);
-    nrender::draw_text(m_x1 + 5, m_y1 + 5, m_text, 0, nrender::pSystemFont1);
+    int tw = nrender::get_text_width(m_text, nrender::pSystemFont1);
+    nrender::draw_text(m_x1 + (m_x2-m_x1)/2 - tw/2, m_y1 + (m_y2-m_y1)/2 - 8, m_text, 0, nrender::pSystemFont1);
 }
 void NButton::handle_touch(int tx, int ty, int action) {
     if (tx >= m_x1 && tx < m_x2 && ty >= m_y1 && ty < m_y2) {
@@ -29,11 +30,15 @@ void NTextBox::render() {
     uint16_t bg = m_focused ? 0xAF7D : 0xFFFF;
     nrender::fill_rect(m_x, m_y, m_x + m_w, m_y + 25, bg);
     nrender::draw_text(m_x + 5, m_y + 5, m_buffer, 0, nrender::pSystemFont1);
+    if (m_focused) {
+        int tw = nrender::get_text_width(m_buffer, nrender::pSystemFont1);
+        nrender::fill_rect(m_x + 5 + tw, m_y + 5, m_x + 7 + tw, m_y + 20, 0);
+    }
 }
 void NTextBox::handle_touch(int tx, int ty, int action) {
     if (tx >= m_x && tx < m_x + m_w && ty >= m_y && ty < m_y + 25) {
         if (action == TOUCH_DOWN) m_focused = true;
-    }
+    } else if (action == TOUCH_DOWN) m_focused = false;
 }
 void NTextBox::SetText(const char* text) { if(text) String_Strcpy(m_buffer, text); }
 void NTextBox::AppendChar(char c) {
