@@ -29,7 +29,7 @@ void Search::show(const char* theme) {
 
 bool Search::search_in_file(int fd, const char* query, int* found_line, int* found_col) {
     if (fd < 0 || !query) return false;
-    if (File_Lseek(fd, 0, FILE_SEEK_SET) < 0) return false;
+    int sres = File_Lseek(fd, 0, FILE_SEEK_SET); (void)sres;
     char buffer[1024]; int bytes; int line = 0;
     while ((bytes = File_Read(fd, buffer, sizeof(buffer) - 1)) > 0) {
         buffer[bytes] = '\0';

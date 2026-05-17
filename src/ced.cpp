@@ -27,7 +27,7 @@ Editor::Editor() : m_modified(false), m_cx(0), m_cy(0), m_vx(0), m_vy(0), m_line
     String_Strcpy(m_config.theme, "light");
 }
 
-Editor::~Editor() { clear_lines(); if (m_fd >= 0) { (void)File_Close(m_fd); } if (m_keyboard) delete m_keyboard; }
+Editor::~Editor() { clear_lines(); if (m_fd >= 0) { File_Error res = File_Close(m_fd); (void)res; } if (m_keyboard) delete m_keyboard; }
 
 bool Editor::init() {
     load_config();
@@ -37,8 +37,8 @@ bool Editor::init() {
     int fd = File_Open("\\\\fls0\\untitled.py", FILE_OPEN_WRITE | FILE_OPEN_CREATE);
     if (fd >= 0) {
         const char* demo = "from gint import *\n\ndef main():\n    drect(0, 0, 320, 528, C_WHITE)\n    dtext(50, 50, C_BLACK, 'Hello World')\n    dupdate()\n    getkey()\n\nmain()";
-        (void)File_Write(fd, demo, (int)String_Strlen(demo));
-        (void)File_Close(fd);
+        int res = (int)File_Write(fd, demo, (int)String_Strlen(demo)); (void)res;
+        File_Error cerr = File_Close(fd); (void)cerr;
     }
 
     return load_file("\\\\fls0\\untitled.py");
@@ -49,7 +49,7 @@ bool Editor::load_config() {
     if (fd < 0) return false;
     char buffer[256]; int bytes = File_Read(fd, buffer, sizeof(buffer) - 1);
     if (bytes > 0) { buffer[bytes] = '\0'; }
-    (void)File_Close(fd); return true;
+    File_Error res = File_Close(fd); (void)res; return true;
 }
 
 void Editor::clear_lines() { if(m_lines) Mem_Free(m_lines); m_lines = nullptr; m_line_count = 0; m_line_capacity = 0; }
@@ -68,7 +68,7 @@ bool Editor::add_line_info(uint32_t offset, uint16_t len) {
 }
 
 bool Editor::load_file(const char* path) {
-    if (m_fd >= 0) { (void)File_Close(m_fd); }
+    if (m_fd >= 0) { File_Error res = File_Close(m_fd); (void)res; }
     m_fd = File_Open(path, FILE_OPEN_READ);
     if (m_fd < 0) return false;
     String_Strcpy(m_filename, path);
@@ -94,8 +94,8 @@ char* Editor::get_line_text(int index) {
     static char line_cache[1024];
     uint16_t len = m_lines[index].length;
     if (len > 1023) len = 1023;
-    if (File_Lseek(m_fd, (int)m_lines[index].file_offset, FILE_SEEK_SET) < 0) return nullptr;
-    if (File_Read(m_fd, line_cache, (int)len) < 0) return nullptr;
+    int sres = File_Lseek(m_fd, (int)m_lines[index].file_offset, FILE_SEEK_SET); (void)sres;
+    int rres = File_Read(m_fd, line_cache, (int)len); (void)rres;
     line_cache[len] = '\0';
     return line_cache;
 }
@@ -133,7 +133,9 @@ void Editor::handle_input() {
             const char* menu_opts[] = {"New", "Open", "Save", "Quit"};
             (void)ncinput::pick(menu_opts, 4, "Menu", m_config.theme);
         }
-        if (m_keyboard->is_visible() && ty >= m_keyboard->get_y()) { (void)m_keyboard->update(); }
+        if (m_keyboard->is_visible() && ty >= m_keyboard->get_y()) {
+            (void)m_keyboard->handle_event(ev);
+        }
     }
     if (ev.type == EVENT_KEY && ev.data.key.direction == KEY_PRESSED) {
         switch (ev.data.key.keyCode) {
