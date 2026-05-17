@@ -1,32 +1,30 @@
-name: Build (fx-cp)
+name: Build CED
 
 on:
   push:
+    branches: [ "main", "port-cinput-ced-to-cpp" ]
   pull_request:
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
-    # Run all steps inside your GHCR image
     container:
-      image: ghcr.io/therainbowphoenix/gint-docker:main
+      image: ghcr.io/classpaddev/hollyhock-3:v2.2.1
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
 
-      - name: Build (fxsdk build-cp)
-        run: |
-          fxsdk build-cp
+    - name: Compile
+      run: make -j
 
-      - name: Upload MyAddin.hh3
-        uses: actions/upload-artifact@v4
-        with:
-          name: MyAddin.hh3
-          path: MyAddin.hh3
-          if-no-files-found: error
-          retention-days: 14
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: CED-Bundle
+        path: |
+          dist/CED.hh3
+          dist/CED.elf
