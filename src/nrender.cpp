@@ -25,6 +25,7 @@ void fill_rect(int x1, int y1, int x2, int y2, uint16_t color) {
 int get_char_width(TCHAR ch, const PegFont* pFont) {
     if (!pFont || ch < pFont->wFirstChar || ch >= pFont->wLastChar) return 0;
     int charIndex = ch - pFont->wFirstChar;
+    // pOffsets stores bit offsets
     return (int)(pFont->pOffsets[charIndex + 1] - pFont->pOffsets[charIndex]);
 }
 
@@ -45,10 +46,11 @@ void draw_char(int x, int y, TCHAR ch, uint16_t color, const PegFont* pFont) {
     unsigned int buffer_width, buffer_height;
     LCD_GetSize(&buffer_width, &buffer_height);
 
-    int startByteOffset = (int)pFont->pOffsets[ch - pFont->wFirstChar];
+    int startBitOffset = (int)pFont->pOffsets[ch - pFont->wFirstChar];
     for (int cy = 0; cy < (int)pFont->uHeight; cy++) {
         for (int cx = 0; cx < width; cx++) {
-            int bitPos = (startByteOffset * 8) + (cy * (int)pFont->wBytesPerLine * 8) + cx;
+            // Absolute bit position: row start bit + bit offset of char + x
+            int bitPos = (cy * (int)pFont->wBytesPerLine * 8) + startBitOffset + cx;
             int byteIndex = bitPos / 8;
             int bitInByte = 7 - (bitPos % 8);
             if ((pFont->pData[byteIndex] >> bitInByte) & 1) {

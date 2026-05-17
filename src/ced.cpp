@@ -33,8 +33,15 @@ bool Editor::init() {
     load_config();
     const ncinput::Theme& theme = ncinput::get_theme(m_config.theme);
     m_keyboard = new ncinput::Keyboard(theme);
-    if (m_line_count == 0) return add_line_info(0, 0);
-    return true;
+
+    int fd = File_Open("\\\\fls0\\untitled.py", FILE_OPEN_WRITE | FILE_OPEN_CREATE);
+    if (fd >= 0) {
+        const char* demo = "from gint import *\n\ndef main():\n    drect(0, 0, 320, 528, C_WHITE)\n    dtext(50, 50, C_BLACK, 'Hello World')\n    dupdate()\n    getkey()\n\nmain()";
+        (void)File_Write(fd, demo, (int)String_Strlen(demo));
+        (void)File_Close(fd);
+    }
+
+    return load_file("\\\\fls0\\untitled.py");
 }
 
 bool Editor::load_config() {
@@ -42,7 +49,7 @@ bool Editor::load_config() {
     if (fd < 0) return false;
     char buffer[256]; int bytes = File_Read(fd, buffer, sizeof(buffer) - 1);
     if (bytes > 0) { buffer[bytes] = '\0'; }
-    return File_Close(fd) == FILE_OK;
+    (void)File_Close(fd); return true;
 }
 
 void Editor::clear_lines() { if(m_lines) Mem_Free(m_lines); m_lines = nullptr; m_line_count = 0; m_line_capacity = 0; }
@@ -99,6 +106,9 @@ void Editor::render() {
     const ncinput::Theme& theme = ncinput::get_theme(m_config.theme);
     fill_rect(0, 40, 320, 528, theme.modal_bg);
     fill_rect(0, 0, 320, 40, theme.accent);
+    for(int i=0; i<3; i++) fill_rect(10, 10 + i*8, 30, 12 + i*8, 0xFFFF);
+    int tw = nrender::get_text_width(m_filename, nrender::pSystemFont1);
+    nrender::draw_text(160 - tw/2, 12, m_filename, theme.txt_acc, nrender::pSystemFont1);
     int start_y = 45; int line_h = 20;
     for (size_t i = (size_t)m_vy; i < m_line_count && (start_y + line_h < 528); i++) {
         char* text = get_line_text((int)i);
@@ -117,6 +127,14 @@ void Editor::handle_input() {
     struct Input_Event ev;
     Mem_Memset(&ev, 0, sizeof(ev));
     if (GetInput(&ev, 0, 0x10) != 0 || ev.type == EVENT_NONE) return;
+    if (ev.type == EVENT_TOUCH) {
+        int tx = ev.data.touch_single.p1_x; int ty = ev.data.touch_single.p1_y;
+        if (ty < 40 && tx < 40 && ev.data.touch_single.direction == TOUCH_DOWN) {
+            const char* menu_opts[] = {"New", "Open", "Save", "Quit"};
+            (void)ncinput::pick(menu_opts, 4, "Menu", m_config.theme);
+        }
+        if (m_keyboard->is_visible() && ty >= m_keyboard->get_y()) { (void)m_keyboard->update(); }
+    }
     if (ev.type == EVENT_KEY && ev.data.key.direction == KEY_PRESSED) {
         switch (ev.data.key.keyCode) {
             case KEYCODE_UP: if (m_cy > 0) m_cy--; break;

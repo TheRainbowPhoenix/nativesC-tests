@@ -46,7 +46,6 @@ void NTextBox::Backspace() {
 }
 
 NDialog::NDialog(Height h, const char* title) : m_title(title), m_count(0) {
-    (void)m_title;
     m_x1 = 20; m_x2 = 300;
     int h_px = 100;
     if (h == Height25) h_px = 130;
@@ -59,11 +58,12 @@ NDialog::Result NDialog::ShowDialog() {
     while (true) {
         nrender::fill_rect(m_x1, m_y1, m_x2, m_y2, 0xEF7D);
         nrender::fill_rect(m_x1, m_y1, m_x2, m_y1 + 30, 0x001F);
+        if(m_title) nrender::draw_text(m_x1 + 10, m_y1 + 8, m_title, 0xFFFF, nrender::pSystemFont1);
         for(int i=0; i<m_count; i++) m_elements[i]->render();
         LCD_Refresh();
         struct Input_Event ev;
         Mem_Memset(&ev, 0, sizeof(ev));
-        if (GetInput(&ev, 0, 0x10) == 0) {
+        if (GetInput(&ev, 0xFFFFFFFF, 0x10) == 0) {
             if (ev.type == EVENT_TOUCH) {
                 int tx = ev.data.touch_single.p1_x;
                 int ty = ev.data.touch_single.p1_y;

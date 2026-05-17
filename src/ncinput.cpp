@@ -23,7 +23,13 @@ Keyboard::Keyboard(const Theme& theme, const char* layout) : m_theme(theme), m_v
 void Keyboard::draw_key(int x, int y, int w, int h, const char* label, bool is_spec, bool is_pressed, bool is_accent) {
     uint16_t bg = is_pressed ? m_theme.hl : (is_accent ? m_theme.accent : (is_spec ? m_theme.key_spec : m_theme.key_bg));
     nrender::fill_rect(x + 1, y + 1, x + w - 1, y + h - 1, bg);
-    if(label) nrender::draw_text(x + 5, y + 5, label, is_accent ? m_theme.txt_acc : m_theme.txt, nrender::pSystemFont1);
+    uint16_t border = m_theme.key_spec;
+    for(int i=x; i<x+w; i++) { LCD_SetPixel(i, y, border); LCD_SetPixel(i, y+h-1, border); }
+    for(int i=y; i<y+h; i++) { LCD_SetPixel(x, i, border); LCD_SetPixel(x+w-1, i, border); }
+    if(label) {
+        int tw = nrender::get_text_width(label, nrender::pSystemFont1);
+        nrender::draw_text(x + w/2 - tw/2, y + h/2 - 8, label, is_accent ? m_theme.txt_acc : m_theme.txt, nrender::pSystemFont1);
+    }
 }
 
 static const char* layouts_data[4] = { "1234567890", "qwertyuiop", "asdfghjkl:", "zxcvbnm,._" };
@@ -39,20 +45,29 @@ void Keyboard::draw() {
             draw_key(c * kw, grid_y + r * row_h, kw, row_h, buf);
         }
     }
+    draw_key(0, grid_y + 4*row_h, 60, row_h, "CAPS", true, m_shift);
+    draw_key(60, grid_y + 4*row_h, 60, row_h, "<-", true);
+    draw_key(120, grid_y + 4*row_h, 140, row_h, "Space");
+    draw_key(260, grid_y + 4*row_h, 60, row_h, "EXE", false, false, true);
 }
 
-const char* Keyboard::update() {
-    struct Input_Event ev;
-    Mem_Memset(&ev, 0, sizeof(ev));
-    if (GetInput(&ev, 0, 0x10) != 0 || ev.type != EVENT_TOUCH) return nullptr;
+const char* Keyboard::handle_event(const struct Input_Event& ev) {
+    if (ev.type != EVENT_TOUCH) return nullptr;
     if (ev.data.touch_single.direction == TOUCH_DOWN) {
-        int tx = ev.data.touch_single.p1_x;
-        int ty = ev.data.touch_single.p1_y;
+        int tx = ev.data.touch_single.p1_x; int ty = ev.data.touch_single.p1_y;
         if (ty < m_y) return nullptr;
         int grid_y = m_y + 30; int row_h = 45;
-        int row = (ty - grid_y) / row_h; int col = tx / (320 / 10);
-        if (row >= 0 && row < 4 && col >= 0 && col < 10) {
-            static char ret[2] = {0, 0}; ret[0] = layouts_data[row][col]; return ret;
+        int row = (ty - grid_y) / row_h;
+        if (row >= 0 && row < 4) {
+            int col = tx / (320 / 10);
+            if (col >= 0 && col < 10) {
+                static char ret[2] = {0, 0}; ret[0] = layouts_data[row][col]; return ret;
+            }
+        } else if (row == 4) {
+            if (tx < 60) { m_shift = !m_shift; return nullptr; }
+            if (tx < 120) return "BACKSPACE";
+            if (tx < 260) return " ";
+            return "ENTER";
         }
     }
     return nullptr;
@@ -72,22 +87,23 @@ char* input(const char* prompt, InputType type, const char* theme_name, const ch
     nui::NTextBox tb(dlg.GetLeftX() + 10, dlg.GetTopY() + 40, 200, 256);
     tb.set_focused(true);
     dlg.AddElement(tb);
-
-    Keyboard kbd(theme);
-    kbd.set_visible(true);
-
+    Keyboard kbd(theme); kbd.set_visible(true);
     while (true) {
+        nrender::fill_rect(0, 0, 320, 528, theme.modal_bg);
         nrender::fill_rect(20, dlg.GetTopY(), 300, 528, 0xEF7D);
-        tb.render();
-        kbd.draw();
+        tb.render(); kbd.draw();
         LCD_Refresh();
-
         struct Input_Event ev;
+        Mem_Memset(&ev, 0, sizeof(ev));
         if (GetInput(&ev, 0xFFFFFFFF, 0x10) == 0) {
             if (ev.type == EVENT_TOUCH) {
                 if (ev.data.touch_single.p1_y >= kbd.get_y()) {
-                    const char* res = kbd.update();
-                    if (res) tb.AppendChar(res[0]);
+                    const char* res = kbd.handle_event(ev);
+                    if (res) {
+                        if (String_Strcmp(res, "BACKSPACE") == 0) tb.Backspace();
+                        else if (String_Strcmp(res, "ENTER") == 0) return local_strdup(tb.GetText());
+                        else tb.AppendChar(res[0]);
+                    }
                 } else {
                     tb.handle_touch(ev.data.touch_single.p1_x, ev.data.touch_single.p1_y, (int)ev.data.touch_single.direction);
                 }

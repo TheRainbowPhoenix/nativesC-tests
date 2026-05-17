@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <os/input.h>
 
 namespace ncinput {
 
@@ -38,7 +39,7 @@ public:
     Keyboard(const Theme& theme, const char* layout = "qwerty");
 
     void draw();
-    const char* update(); // Returns string to insert or command
+    const char* handle_event(const struct Input_Event& ev);
 
     void set_visible(bool visible) { m_visible = visible; }
     bool is_visible() const { return m_visible; }
