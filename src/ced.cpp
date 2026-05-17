@@ -1,8 +1,8 @@
 #include "ced.hpp"
-#include <sdk/os/file.h>
-#include <sdk/os/mem.h>
-#include <sdk/os/lcd.h>
-#include <sdk/os/input.h>
+#include <os/file.h>
+#include <os/mem.h>
+#include <os/lcd.h>
+#include <os/input.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>

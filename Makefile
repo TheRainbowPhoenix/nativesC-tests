@@ -3,35 +3,33 @@ BUILDDIR = obj
 OUTDIR = dist
 DEPDIR = .deps
 
-# Compiler prefix based on CI logs
-CROSS_COMPILE := sh-elf-
-
-AS:=$(CROSS_COMPILE)gcc
+# Hollyhock-3 Toolchain
+AS:=sh4a_nofpueb-elf-gcc
 AS_FLAGS:=-gdwarf-5
 
-# The SDK is usually in the sysroot for fxsdk images
-SDK_DIR?=/home/dev/.local/share/fxsdk/sysroot/sh3eb-elf
+SDK_DIR?=/sdk
 
 DEPFLAGS=-MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
 WARNINGS=-Wall -Wextra -pedantic -Werror -pedantic-errors
-INCLUDES=-I$(SDK_DIR)/include -Isrc
+# Include /sdk/include (for appdef.h) and /sdk/include/sdk (for os/*.h)
+INCLUDES=-I$(SDK_DIR)/include -I$(SDK_DIR)/include/sdk -Isrc
 DEFINES=
 FUNCTION_FLAGS=-flto=auto -ffat-lto-objects -fno-builtin -ffunction-sections -fdata-sections -gdwarf-5 -O2
 COMMON_FLAGS=$(FUNCTION_FLAGS) $(INCLUDES) $(WARNINGS) $(DEFINES)
 
-CC:=$(CROSS_COMPILE)gcc
+CC:=sh4a_nofpueb-elf-gcc
 CC_FLAGS=-std=c23 $(COMMON_FLAGS)
 
-CXX:=$(CROSS_COMPILE)g++
+CXX:=sh4a_nofpueb-elf-g++
 CXX_FLAGS=-std=c++20 $(COMMON_FLAGS) -fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-use-cxa-atexit
 
-LD:=$(CROSS_COMPILE)g++
+LD:=sh4a_nofpueb-elf-g++
 LD_FLAGS:=$(FUNCTION_FLAGS) -Wl,--gc-sections
-LIBS:=-L$(SDK_DIR)/lib -lsdk -lgint
+LIBS:=-L$(SDK_DIR) -lsdk
 
-READELF:=$(CROSS_COMPILE)readelf
-OBJCOPY:=$(CROSS_COMPILE)objcopy
-STRIP:=$(CROSS_COMPILE)strip
+READELF:=sh4a_nofpueb-elf-readelf
+OBJCOPY:=sh4a_nofpueb-elf-objcopy
+STRIP:=sh4a_nofpueb-elf-strip
 
 APP_ELF := $(OUTDIR)/CED.elf
 APP_HH3 := $(APP_ELF:.elf=.hh3)

@@ -1,5 +1,5 @@
 #include "ced.hpp"
-#include <sdk/os/lcd.h>
+#include <os/lcd.h>
 
 int main(void) {
     ced::Editor editor;

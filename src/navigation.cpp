@@ -1,6 +1,6 @@
 #include "navigation.hpp"
-#include <sdk/os/file.h>
-#include <sdk/os/mem.h>
+#include <os/file.h>
+#include <os/mem.h>
 #include <stdlib.h>
 #include <string.h>
 

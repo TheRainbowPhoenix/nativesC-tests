@@ -1,6 +1,6 @@
 #include "analysis.hpp"
-#include <sdk/os/file.h>
-#include <sdk/os/input.h>
+#include <os/file.h>
+#include <os/input.h>
 #include <string.h>
 #include <stdlib.h>
 

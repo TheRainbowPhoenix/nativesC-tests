@@ -1,9 +1,9 @@
 #include "ncinput.hpp"
-#include <sdk/os/lcd.h>
-#include <sdk/os/input.h>
-#include <sdk/os/mem.h>
-#include <sdk/os/string.h>
-#include <sdk/os/gui.hpp>
+#include <os/lcd.h>
+#include <os/input.h>
+#include <os/mem.h>
+#include <os/string.h>
+#include <os/gui.hpp>
 #include <string.h>
 #include <stdlib.h>
 

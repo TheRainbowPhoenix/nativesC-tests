@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ncinput.hpp"
-#include <sdk/os/file.h>
+#include <os/file.h>
 #include <stddef.h>
 
 namespace ced {
