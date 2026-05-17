@@ -5,7 +5,7 @@
 
 #ifndef PC
 	APP_NAME("CED")
-	APP_DESCRIPTION("CED")
+	APP_DESCRIPTION("CED code editor for Hollyhock-3")
 	APP_AUTHOR("Phoebe")
 	APP_VERSION("1.0.0")
 #endif

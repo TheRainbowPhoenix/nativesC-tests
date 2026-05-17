@@ -14,7 +14,10 @@ namespace ced {
 static void fill_rect(int x1, int y1, int x2, int y2, uint16_t color) {
     uint16_t* v_addr = LCD_GetVRAMAddress();
     unsigned int sw, sh; LCD_GetSize(&sw, &sh);
-    if (x1 < 0) x1 = 0; if (y1 < 0) y1 = 0; if (x2 > (int)sw) x2 = (int)sw; if (y2 > (int)sh) y2 = (int)sh;
+    if (x1 < 0) x1 = 0;
+    if (y1 < 0) y1 = 0;
+    if (x2 > (int)sw) x2 = (int)sw;
+    if (y2 > (int)sh) y2 = (int)sh;
     for (int y = y1; y < y2; y++) {
         uint16_t* row = v_addr + (unsigned int)y * sw;
         for (int x = x1; x < x2; x++) row[x] = color;
@@ -30,7 +33,7 @@ Editor::Editor() : m_modified(false), m_cx(0), m_cy(0), m_vx(0), m_vy(0), m_line
 Editor::~Editor() { clear_lines(); if (m_fd >= 0) { (void)File_Close(m_fd); } if (m_keyboard) delete m_keyboard; }
 
 bool Editor::init() {
-    load_config();
+    (void)load_config();
     const ncinput::Theme& theme = ncinput::get_theme(m_config.theme);
     m_keyboard = new ncinput::Keyboard(theme);
 
@@ -142,7 +145,6 @@ void Editor::delete_char() {
 }
 
 void Editor::new_line() {
-    // Simplified new line logic
     m_cy++; m_cx = 0; m_modified = true;
 }
 
@@ -199,6 +201,33 @@ void Editor::handle_input() {
             case KEYCODE_BACKSPACE: delete_char(); break;
             case KEYCODE_EXE: new_line(); break;
             case KEYCODE_KEYBOARD: m_keyboard->set_visible(!m_keyboard->is_visible()); break;
+            case KEYCODE_SHIFT:
+            case KEYCODE_POWER_CLEAR:
+            case KEYCODE_EQUALS:
+            case KEYCODE_X:
+            case KEYCODE_Y:
+            case KEYCODE_Z:
+            case KEYCODE_POWER:
+            case KEYCODE_DIVIDE:
+            case KEYCODE_OPEN_PARENTHESIS:
+            case KEYCODE_7:
+            case KEYCODE_8:
+            case KEYCODE_9:
+            case KEYCODE_TIMES:
+            case KEYCODE_CLOSE_PARENTHESIS:
+            case KEYCODE_4:
+            case KEYCODE_5:
+            case KEYCODE_6:
+            case KEYCODE_MINUS:
+            case KEYCODE_COMMA:
+            case KEYCODE_1:
+            case KEYCODE_2:
+            case KEYCODE_3:
+            case KEYCODE_PLUS:
+            case KEYCODE_NEGATIVE:
+            case KEYCODE_0:
+            case KEYCODE_DOT:
+            case KEYCODE_EXP:
             default: break;
         }
     }
