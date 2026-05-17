@@ -124,6 +124,8 @@ int pick(const char** options, size_t count, const char* prompt, const char* the
     dlg.AddElement(close_btn);
 
     nui::NButton* btns[10];
+    for (int i = 0; i < 10; i++) btns[i] = nullptr;
+
     int n = (int)count; if (n > 10) n = 10;
     for (int i = 0; i < n; i++) {
         btns[i] = new nui::NButton(40, 60 + i * 45, 280, 100 + i * 45, options[i], i);
@@ -137,7 +139,7 @@ int pick(const char** options, size_t count, const char* prompt, const char* the
         close_btn.render();
         int tw = nrender::get_text_width(prompt, nrender::pSystemFont1);
         nrender::draw_text(160 - tw/2, 15, prompt, 0xFFFF, nrender::pSystemFont1);
-        for (int i = 0; i < n; i++) btns[i]->render();
+        for (int i = 0; i < n; i++) if(btns[i]) btns[i]->render();
         LCD_Refresh();
         struct Input_Event ev;
         Mem_Memset(&ev, 0, sizeof(ev));
@@ -146,12 +148,12 @@ int pick(const char** options, size_t count, const char* prompt, const char* the
                 int tx = ev.data.touch_single.p1_x; int ty = ev.data.touch_single.p1_y;
                 int act = (int)ev.data.touch_single.direction;
                 close_btn.handle_touch(tx, ty, act);
-                for (int i = 0; i < n; i++) btns[i]->handle_touch(tx, ty, act);
+                for (int i = 0; i < n; i++) if(btns[i]) btns[i]->handle_touch(tx, ty, act);
             }
             if (ev.type == EVENT_KEY && (ev.data.key.keyCode == KEYCODE_POWER_CLEAR || ev.data.key.keyCode == KEYCODE_POWER)) break;
             if (close_btn.is_clicked()) break;
             for (int i = 0; i < n; i++) {
-                if (btns[i]->is_clicked()) { result = i; goto done; }
+                if (btns[i] && btns[i]->is_clicked()) { result = i; goto done; }
             }
         }
     }

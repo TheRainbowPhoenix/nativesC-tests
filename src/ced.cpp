@@ -14,10 +14,7 @@ namespace ced {
 static void fill_rect(int x1, int y1, int x2, int y2, uint16_t color) {
     uint16_t* v_addr = LCD_GetVRAMAddress();
     unsigned int sw, sh; LCD_GetSize(&sw, &sh);
-    if (x1 < 0) x1 = 0;
-    if (y1 < 0) y1 = 0;
-    if (x2 > (int)sw) x2 = (int)sw;
-    if (y2 > (int)sh) y2 = (int)sh;
+    if (x1 < 0) x1 = 0; if (y1 < 0) y1 = 0; if (x2 > (int)sw) x2 = (int)sw; if (y2 > (int)sh) y2 = (int)sh;
     for (int y = y1; y < y2; y++) {
         uint16_t* row = v_addr + (unsigned int)y * sw;
         for (int x = x1; x < x2; x++) row[x] = color;
@@ -44,7 +41,9 @@ bool Editor::init() {
         (void)File_Close(fd);
     }
 
-    return load_file("\\\\fls0\\untitled.py");
+    (void)load_file("\\\\fls0\\untitled.py");
+    if (m_line_count == 0) (void)add_line_info(0, 0);
+    return true;
 }
 
 bool Editor::load_config() {
@@ -78,7 +77,7 @@ bool Editor::add_line_info(uint32_t offset, uint16_t len) {
 }
 
 bool Editor::load_file(const char* path) {
-    if (m_fd >= 0) { (void)File_Close(m_fd); }
+    if (m_fd >= 0) { (void)File_Close(m_fd); m_fd = -1; }
     m_fd = File_Open(path, FILE_OPEN_READ);
     if (m_fd < 0) return false;
     String_Strcpy(m_filename, path);
@@ -87,7 +86,7 @@ bool Editor::load_file(const char* path) {
     while ((bytes = File_Read(m_fd, buffer, sizeof(buffer))) > 0) {
         for (int i = 0; i < bytes; i++) {
             if (buffer[i] == '\n') {
-                if (!add_line_info(line_start, (uint16_t)(current_offset + (uint32_t)i - line_start))) break;
+                (void)add_line_info(line_start, (uint16_t)(current_offset + (uint32_t)i - line_start));
                 line_start = current_offset + (uint32_t)i + 1;
             }
         }
@@ -165,7 +164,7 @@ void Editor::render() {
         }
         start_y += line_h;
     }
-    if (m_keyboard->is_visible()) m_keyboard->draw();
+    if (m_keyboard && m_keyboard->is_visible()) m_keyboard->draw();
     LCD_Refresh();
 }
 
@@ -183,7 +182,7 @@ void Editor::handle_input() {
             else if (choice == 5) Outline::show(m_filename, m_config.theme);
             else if (choice == 6) Problems::show(m_config.theme);
         }
-        if (m_keyboard->is_visible() && ty >= m_keyboard->get_y()) {
+        if (m_keyboard && m_keyboard->is_visible() && ty >= m_keyboard->get_y()) {
             const char* res = m_keyboard->handle_event(ev);
             if (res) {
                 if (String_Strcmp(res, "BACKSPACE") == 0) delete_char();
@@ -200,34 +199,7 @@ void Editor::handle_input() {
             case KEYCODE_RIGHT: if (m_cx < (int)m_lines[m_cy].length) m_cx++; break;
             case KEYCODE_BACKSPACE: delete_char(); break;
             case KEYCODE_EXE: new_line(); break;
-            case KEYCODE_KEYBOARD: m_keyboard->set_visible(!m_keyboard->is_visible()); break;
-            case KEYCODE_SHIFT:
-            case KEYCODE_POWER_CLEAR:
-            case KEYCODE_EQUALS:
-            case KEYCODE_X:
-            case KEYCODE_Y:
-            case KEYCODE_Z:
-            case KEYCODE_POWER:
-            case KEYCODE_DIVIDE:
-            case KEYCODE_OPEN_PARENTHESIS:
-            case KEYCODE_7:
-            case KEYCODE_8:
-            case KEYCODE_9:
-            case KEYCODE_TIMES:
-            case KEYCODE_CLOSE_PARENTHESIS:
-            case KEYCODE_4:
-            case KEYCODE_5:
-            case KEYCODE_6:
-            case KEYCODE_MINUS:
-            case KEYCODE_COMMA:
-            case KEYCODE_1:
-            case KEYCODE_2:
-            case KEYCODE_3:
-            case KEYCODE_PLUS:
-            case KEYCODE_NEGATIVE:
-            case KEYCODE_0:
-            case KEYCODE_DOT:
-            case KEYCODE_EXP:
+            case KEYCODE_KEYBOARD: if(m_keyboard) m_keyboard->set_visible(!m_keyboard->is_visible()); break;
             default: break;
         }
     }
