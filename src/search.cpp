@@ -24,12 +24,15 @@ static bool local_strstr(const char* haystack, const char* needle) {
 
 void Search::show(const char* theme) {
     char* query = ncinput::input("Search:", ncinput::InputType::AlphaNumeric, theme);
-    if (query) { Mem_Free(query); }
+    if (query) {
+        // Search logic would call search_in_file and handle result
+        Mem_Free(query);
+    }
 }
 
 bool Search::search_in_file(int fd, const char* query, int* found_line, int* found_col) {
     if (fd < 0 || !query) return false;
-    int sres = File_Lseek(fd, 0, FILE_SEEK_SET); (void)sres;
+    if (File_Lseek(fd, 0, FILE_SEEK_SET) < 0) return false;
     char buffer[1024]; int bytes; int line = 0;
     while ((bytes = File_Read(fd, buffer, sizeof(buffer) - 1)) > 0) {
         buffer[bytes] = '\0';

@@ -16,7 +16,7 @@ static void fill_rect(int x1, int y1, int x2, int y2, uint16_t color) {
     if (x2 > (int)sw) x2 = (int)sw;
     if (y2 > (int)sh) y2 = (int)sh;
     for (int y = y1; y < y2; y++) {
-        uint16_t* row = v_addr + y * sw;
+        uint16_t* row = v_addr + (unsigned int)y * sw;
         for (int x = x1; x < x2; x++) row[x] = color;
     }
 }
@@ -30,18 +30,21 @@ Editor::Editor() : m_modified(false), m_cx(0), m_cy(0), m_vx(0), m_vy(0), m_line
 Editor::~Editor() { clear_lines(); if (m_fd >= 0) { File_Error res = File_Close(m_fd); (void)res; } if (m_keyboard) delete m_keyboard; }
 
 bool Editor::init() {
-    load_config();
+    (void)load_config();
     const ncinput::Theme& theme = ncinput::get_theme(m_config.theme);
     m_keyboard = new ncinput::Keyboard(theme);
 
     int fd = File_Open("\\\\fls0\\untitled.py", FILE_OPEN_WRITE | FILE_OPEN_CREATE);
     if (fd >= 0) {
         const char* demo = "from gint import *\n\ndef main():\n    drect(0, 0, 320, 528, C_WHITE)\n    dtext(50, 50, C_BLACK, 'Hello World')\n    dupdate()\n    getkey()\n\nmain()";
-        int res = (int)File_Write(fd, demo, (int)String_Strlen(demo)); (void)res;
-        File_Error cerr = File_Close(fd); (void)cerr;
+        int wres = (int)File_Write(fd, demo, (int)String_Strlen(demo)); (void)wres;
+        File_Error cres = File_Close(fd); (void)cres;
     }
 
-    return load_file("\\\\fls0\\untitled.py");
+    if (!load_file("\\\\fls0\\untitled.py")) {
+        if (m_line_count == 0) (void)add_line_info(0, 0);
+    }
+    return true;
 }
 
 bool Editor::load_config() {
@@ -49,7 +52,8 @@ bool Editor::load_config() {
     if (fd < 0) return false;
     char buffer[256]; int bytes = File_Read(fd, buffer, sizeof(buffer) - 1);
     if (bytes > 0) { buffer[bytes] = '\0'; }
-    File_Error res = File_Close(fd); (void)res; return true;
+    File_Error res = File_Close(fd); (void)res;
+    return true;
 }
 
 void Editor::clear_lines() { if(m_lines) Mem_Free(m_lines); m_lines = nullptr; m_line_count = 0; m_line_capacity = 0; }
@@ -83,8 +87,8 @@ bool Editor::load_file(const char* path) {
         }
         current_offset += (uint32_t)bytes;
     }
-    if (current_offset > line_start) add_line_info(line_start, (uint16_t)(current_offset - line_start));
-    if (m_line_count == 0) add_line_info(0, 0);
+    if (current_offset > line_start) (void)add_line_info(line_start, (uint16_t)(current_offset - line_start));
+    if (m_line_count == 0) (void)add_line_info(0, 0);
     m_modified = false; m_cx = m_cy = 0; m_vx = m_vy = 0;
     return true;
 }
@@ -94,8 +98,8 @@ char* Editor::get_line_text(int index) {
     static char line_cache[1024];
     uint16_t len = m_lines[index].length;
     if (len > 1023) len = 1023;
-    int sres = File_Lseek(m_fd, (int)m_lines[index].file_offset, FILE_SEEK_SET); (void)sres;
-    int rres = File_Read(m_fd, line_cache, (int)len); (void)rres;
+    if (File_Lseek(m_fd, (int)m_lines[index].file_offset, FILE_SEEK_SET) < 0) return nullptr;
+    if (File_Read(m_fd, line_cache, (int)len) < 0) return nullptr;
     line_cache[len] = '\0';
     return line_cache;
 }

@@ -1,6 +1,14 @@
+#include <appdef.h>
 #include "ced.hpp"
 #include <os/lcd.h>
 #include <os/mem.h>
+
+#ifndef PC
+	APP_NAME("CED")
+	APP_DESCRIPTION("CED")
+	APP_AUTHOR("Phoebe")
+	APP_VERSION("1.0.0")
+#endif
 
 int main(void) {
     ced::Editor editor;
