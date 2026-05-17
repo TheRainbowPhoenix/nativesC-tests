@@ -1,5 +1,8 @@
 #include "ced.hpp"
 #include "nrender.hpp"
+#include "navigation.hpp"
+#include "search.hpp"
+#include "analysis.hpp"
 #include <os/file.h>
 #include <os/mem.h>
 #include <os/lcd.h>
@@ -11,10 +14,7 @@ namespace ced {
 static void fill_rect(int x1, int y1, int x2, int y2, uint16_t color) {
     uint16_t* v_addr = LCD_GetVRAMAddress();
     unsigned int sw, sh; LCD_GetSize(&sw, &sh);
-    if (x1 < 0) x1 = 0;
-    if (y1 < 0) y1 = 0;
-    if (x2 > (int)sw) x2 = (int)sw;
-    if (y2 > (int)sh) y2 = (int)sh;
+    if (x1 < 0) x1 = 0; if (y1 < 0) y1 = 0; if (x2 > (int)sw) x2 = (int)sw; if (y2 > (int)sh) y2 = (int)sh;
     for (int y = y1; y < y2; y++) {
         uint16_t* row = v_addr + (unsigned int)y * sw;
         for (int x = x1; x < x2; x++) row[x] = color;
@@ -30,7 +30,7 @@ Editor::Editor() : m_modified(false), m_cx(0), m_cy(0), m_vx(0), m_vy(0), m_line
 Editor::~Editor() { clear_lines(); if (m_fd >= 0) { (void)File_Close(m_fd); } if (m_keyboard) delete m_keyboard; }
 
 bool Editor::init() {
-    (void)load_config();
+    load_config();
     const ncinput::Theme& theme = ncinput::get_theme(m_config.theme);
     m_keyboard = new ncinput::Keyboard(theme);
 
@@ -38,7 +38,7 @@ bool Editor::init() {
     if (fd >= 0) {
         const char* demo = "from gint import *\n\ndef main():\n    drect(0, 0, 320, 528, C_WHITE)\n    dtext(50, 50, C_BLACK, 'Hello World')\n    dupdate()\n    getkey()\n\nmain()";
         int wres = (int)File_Write(fd, demo, (int)String_Strlen(demo)); (void)wres;
-        File_Error cres = File_Close(fd); (void)cres;
+        (void)File_Close(fd);
     }
 
     return load_file("\\\\fls0\\untitled.py");
@@ -49,11 +49,16 @@ bool Editor::load_config() {
     if (fd < 0) return false;
     char buffer[256]; int bytes = File_Read(fd, buffer, sizeof(buffer) - 1);
     if (bytes > 0) { buffer[bytes] = '\0'; }
-    File_Error res = File_Close(fd); (void)res;
-    return true;
+    (void)File_Close(fd); return true;
 }
 
-void Editor::clear_lines() { if(m_lines) Mem_Free(m_lines); m_lines = nullptr; m_line_count = 0; m_line_capacity = 0; }
+void Editor::clear_lines() {
+    if(m_lines) {
+        for(size_t i=0; i<m_line_count; i++) if(m_lines[i].buffer) Mem_Free(m_lines[i].buffer);
+        Mem_Free(m_lines);
+    }
+    m_lines = nullptr; m_line_count = 0; m_line_capacity = 0;
+}
 
 bool Editor::add_line_info(uint32_t offset, uint16_t len) {
     if (m_line_count >= m_line_capacity) {
@@ -65,11 +70,12 @@ bool Editor::add_line_info(uint32_t offset, uint16_t len) {
     }
     m_lines[m_line_count].file_offset = offset;
     m_lines[m_line_count].length = len;
+    m_lines[m_line_count].buffer = nullptr;
     m_line_count++; return true;
 }
 
 bool Editor::load_file(const char* path) {
-    if (m_fd >= 0) { File_Error res = File_Close(m_fd); (void)res; }
+    if (m_fd >= 0) { (void)File_Close(m_fd); }
     m_fd = File_Open(path, FILE_OPEN_READ);
     if (m_fd < 0) return false;
     String_Strcpy(m_filename, path);
@@ -91,7 +97,9 @@ bool Editor::load_file(const char* path) {
 }
 
 char* Editor::get_line_text(int index) {
-    if (index < 0 || (size_t)index >= m_line_count || m_fd < 0) return nullptr;
+    if (index < 0 || (size_t)index >= m_line_count) return nullptr;
+    if (m_lines[index].buffer) return m_lines[index].buffer;
+    if (m_fd < 0) return nullptr;
     static char line_cache[1024];
     uint16_t len = m_lines[index].length;
     if (len > 1023) len = 1023;
@@ -102,6 +110,41 @@ char* Editor::get_line_text(int index) {
 }
 
 bool Editor::save_file(const char* path) { (void)path; return false; }
+
+void Editor::insert_char(char c) {
+    char* text = get_line_text(m_cy);
+    if (!text) return;
+    unsigned int len = String_Strlen(text);
+    char* new_buf = (char*)Mem_Malloc(len + 2);
+    if (!new_buf) return;
+    Mem_Memcpy(new_buf, text, m_cx);
+    new_buf[m_cx] = c;
+    Mem_Memcpy(new_buf + m_cx + 1, text + m_cx, len - m_cx + 1);
+    if (m_lines[m_cy].buffer) Mem_Free(m_lines[m_cy].buffer);
+    m_lines[m_cy].buffer = new_buf;
+    m_lines[m_cy].length++;
+    m_cx++; m_modified = true;
+}
+
+void Editor::delete_char() {
+    if (m_cx == 0) return;
+    char* text = get_line_text(m_cy);
+    if (!text) return;
+    unsigned int len = String_Strlen(text);
+    char* new_buf = (char*)Mem_Malloc(len);
+    if (!new_buf) return;
+    Mem_Memcpy(new_buf, text, m_cx - 1);
+    Mem_Memcpy(new_buf + m_cx - 1, text + m_cx, len - m_cx + 1);
+    if (m_lines[m_cy].buffer) Mem_Free(m_lines[m_cy].buffer);
+    m_lines[m_cy].buffer = new_buf;
+    m_lines[m_cy].length--;
+    m_cx--; m_modified = true;
+}
+
+void Editor::new_line() {
+    // Simplified new line logic
+    m_cy++; m_cx = 0; m_modified = true;
+}
 
 void Editor::render() {
     const ncinput::Theme& theme = ncinput::get_theme(m_config.theme);
@@ -131,20 +174,19 @@ void Editor::handle_input() {
     if (ev.type == EVENT_TOUCH) {
         int tx = ev.data.touch_single.p1_x; int ty = ev.data.touch_single.p1_y;
         if (ty < 40 && tx < 40 && ev.data.touch_single.direction == TOUCH_DOWN) {
-            const char* menu_opts[] = {"New", "Open", "Save", "Quit"};
-            (void)ncinput::pick(menu_opts, 4, "Menu", m_config.theme);
+            const char* menu_opts[] = {"New", "Open", "Save", "Search", "Go To", "Outline", "Problems", "Quit"};
+            int choice = ncinput::pick(menu_opts, 8, "CED Menu", m_config.theme);
+            if (choice == 3) Search::show(m_config.theme);
+            else if (choice == 4) Goto::show((int)m_line_count, m_config.theme);
+            else if (choice == 5) Outline::show(m_filename, m_config.theme);
+            else if (choice == 6) Problems::show(m_config.theme);
         }
         if (m_keyboard->is_visible() && ty >= m_keyboard->get_y()) {
             const char* res = m_keyboard->handle_event(ev);
             if (res) {
-                if (String_Strcmp(res, "BACKSPACE") == 0) {
-                    if (m_cx > 0) m_cx--;
-                } else if (String_Strcmp(res, "ENTER") == 0) {
-                    m_cy++; m_cx = 0;
-                } else if (String_Strlen(res) == 1) {
-                    m_cx++;
-                }
-                m_modified = true;
+                if (String_Strcmp(res, "BACKSPACE") == 0) delete_char();
+                else if (String_Strcmp(res, "ENTER") == 0) new_line();
+                else if (String_Strlen(res) == 1) insert_char(res[0]);
             }
         }
     }
@@ -154,36 +196,9 @@ void Editor::handle_input() {
             case KEYCODE_DOWN: if (m_cy < (int)m_line_count - 1) m_cy++; break;
             case KEYCODE_LEFT: if (m_cx > 0) m_cx--; break;
             case KEYCODE_RIGHT: if (m_cx < (int)m_lines[m_cy].length) m_cx++; break;
+            case KEYCODE_BACKSPACE: delete_char(); break;
+            case KEYCODE_EXE: new_line(); break;
             case KEYCODE_KEYBOARD: m_keyboard->set_visible(!m_keyboard->is_visible()); break;
-            case KEYCODE_SHIFT:
-            case KEYCODE_BACKSPACE:
-            case KEYCODE_POWER_CLEAR:
-            case KEYCODE_EQUALS:
-            case KEYCODE_X:
-            case KEYCODE_Y:
-            case KEYCODE_Z:
-            case KEYCODE_POWER:
-            case KEYCODE_DIVIDE:
-            case KEYCODE_OPEN_PARENTHESIS:
-            case KEYCODE_7:
-            case KEYCODE_8:
-            case KEYCODE_9:
-            case KEYCODE_TIMES:
-            case KEYCODE_CLOSE_PARENTHESIS:
-            case KEYCODE_4:
-            case KEYCODE_5:
-            case KEYCODE_6:
-            case KEYCODE_MINUS:
-            case KEYCODE_COMMA:
-            case KEYCODE_1:
-            case KEYCODE_2:
-            case KEYCODE_3:
-            case KEYCODE_PLUS:
-            case KEYCODE_NEGATIVE:
-            case KEYCODE_0:
-            case KEYCODE_DOT:
-            case KEYCODE_EXP:
-            case KEYCODE_EXE:
             default: break;
         }
     }

@@ -120,20 +120,20 @@ char* input(const char* prompt, InputType type, const char* theme_name, const ch
 int pick(const char** options, size_t count, const char* prompt, const char* theme_name) {
     (void)theme_name;
     nui::NDialog dlg(nui::NDialog::Height95, prompt);
-    nui::NButton close_btn(10, 10, 40, 35, "X", 99);
+    nui::NButton close_btn(10, 10, 45, 45, "X", 99);
     dlg.AddElement(close_btn);
 
     nui::NButton* btns[10];
     int n = (int)count; if (n > 10) n = 10;
     for (int i = 0; i < n; i++) {
-        btns[i] = new nui::NButton(40, 60 + i * 40, 280, 95 + i * 40, options[i], i);
+        btns[i] = new nui::NButton(40, 60 + i * 45, 280, 100 + i * 45, options[i], i);
         dlg.AddElement(*btns[i]);
     }
 
     int result = -1;
     while (true) {
         nrender::fill_rect(0, 0, 320, 528, 0xEF7D);
-        nrender::fill_rect(0, 0, 320, 45, 0x001F);
+        nrender::fill_rect(0, 0, 320, 50, 0x001F);
         close_btn.render();
         int tw = nrender::get_text_width(prompt, nrender::pSystemFont1);
         nrender::draw_text(160 - tw/2, 15, prompt, 0xFFFF, nrender::pSystemFont1);
@@ -156,7 +156,7 @@ int pick(const char** options, size_t count, const char* prompt, const char* the
         }
     }
 done:
-    for (int i = 0; i < n; i++) delete btns[i];
+    for (int i = 0; i < n; i++) if(btns[i]) delete btns[i];
     return result;
 }
 
