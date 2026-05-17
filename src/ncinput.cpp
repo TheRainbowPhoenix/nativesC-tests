@@ -125,7 +125,6 @@ int pick(const char** options, size_t count, const char* prompt, const char* the
 
     nui::NButton* btns[10];
     for (int i = 0; i < 10; i++) btns[i] = nullptr;
-
     int n = (int)count; if (n > 10) n = 10;
     for (int i = 0; i < n; i++) {
         btns[i] = new nui::NButton(40, 60 + i * 45, 280, 100 + i * 45, options[i], i);

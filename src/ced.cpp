@@ -13,8 +13,12 @@ namespace ced {
 
 static void fill_rect(int x1, int y1, int x2, int y2, uint16_t color) {
     uint16_t* v_addr = LCD_GetVRAMAddress();
-    unsigned int sw, sh; LCD_GetSize(&sw, &sh);
-    if (x1 < 0) x1 = 0; if (y1 < 0) y1 = 0; if (x2 > (int)sw) x2 = (int)sw; if (y2 > (int)sh) y2 = (int)sh;
+    unsigned int sw, sh;
+    LCD_GetSize(&sw, &sh);
+    if (x1 < 0) x1 = 0;
+    if (y1 < 0) y1 = 0;
+    if (x2 > (int)sw) x2 = (int)sw;
+    if (y2 > (int)sh) y2 = (int)sh;
     for (int y = y1; y < y2; y++) {
         uint16_t* row = v_addr + (unsigned int)y * sw;
         for (int x = x1; x < x2; x++) row[x] = color;
@@ -41,8 +45,9 @@ bool Editor::init() {
         (void)File_Close(fd);
     }
 
-    (void)load_file("\\\\fls0\\untitled.py");
-    if (m_line_count == 0) (void)add_line_info(0, 0);
+    if(!load_file("\\\\fls0\\untitled.py")) {
+        if(m_line_count == 0) (void)add_line_info(0, 0);
+    }
     return true;
 }
 
@@ -86,7 +91,7 @@ bool Editor::load_file(const char* path) {
     while ((bytes = File_Read(m_fd, buffer, sizeof(buffer))) > 0) {
         for (int i = 0; i < bytes; i++) {
             if (buffer[i] == '\n') {
-                (void)add_line_info(line_start, (uint16_t)(current_offset + (uint32_t)i - line_start));
+                if(!add_line_info(line_start, (uint16_t)(current_offset + (uint32_t)i - line_start))) break;
                 line_start = current_offset + (uint32_t)i + 1;
             }
         }
