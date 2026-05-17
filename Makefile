@@ -3,7 +3,6 @@ BUILDDIR = obj
 OUTDIR = dist
 DEPDIR = .deps
 
-# Hollyhock-3 Toolchain
 AS:=sh4a_nofpueb-elf-gcc
 AS_FLAGS:=-gdwarf-5
 
@@ -11,7 +10,6 @@ SDK_DIR?=/sdk
 
 DEPFLAGS=-MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
 WARNINGS=-Wall -Wextra -pedantic -Werror -pedantic-errors
-# Include /sdk/include (for appdef.h) and /sdk/include/sdk (for os/*.h)
 INCLUDES=-I$(SDK_DIR)/include -I$(SDK_DIR)/include/sdk -Isrc
 DEFINES=
 FUNCTION_FLAGS=-flto=auto -ffat-lto-objects -fno-builtin -ffunction-sections -fdata-sections -gdwarf-5 -O2

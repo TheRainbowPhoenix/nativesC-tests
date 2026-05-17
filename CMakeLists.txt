@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 project(CED)
 
-# Hollyhock-3 pure build
 set(SDK_DIR "/sdk")
 include_directories("${SDK_DIR}/include")
 include_directories("${SDK_DIR}/include/sdk")
@@ -14,6 +13,8 @@ set(SOURCES
   src/navigation.cpp
   src/search.cpp
   src/analysis.cpp
+  src/nrender.cpp
+  src/nui.cpp
 )
 
 add_executable(ced ${SOURCES})

@@ -33,27 +33,24 @@ void Outline::show(const char* filename, const char* theme_name) {
 
     while ((bytes = File_Read(fd, buffer, sizeof(buffer) - 1)) > 0) {
         buffer[bytes] = '\0';
-        // (Simplified line processing)
         char* line = buffer;
         while (*line && count < 100) {
             char* next_line = (char*)String_Strchr(line, '\n');
             if (next_line) *next_line = '\0';
-
             char* p = line; while(*p == ' ' || *p == '\t') p++;
             if (local_strncmp(p, "def ", 4) == 0 || local_strncmp(p, "class ", 6) == 0) {
                 results[count++] = local_strdup(p);
             }
-
             if (!next_line) break;
             line = next_line + 1;
         }
         struct Input_Event ev;
         Mem_Memset(&ev, 0, sizeof(ev));
-        if (GetInput(&ev, 0, 0x10) == 0 && ev.type == EVENT_KEY && ev.data.key.keyCode == KEYCODE_POWER_CLEAR) break;
+        if (GetInput(&ev, 0, 0x10) == 0 && ev.type == EVENT_KEY && (ev.data.key.keyCode == KEYCODE_POWER_CLEAR || ev.data.key.keyCode == KEYCODE_POWER)) break;
     }
     (void)File_Close(fd);
     int selected = ncinput::pick(results, count, "Outline", theme_name);
-    if (selected >= 0) { /* Jump logic */ }
+    (void)selected;
     for(int i=0; i<count; i++) Mem_Free((void*)results[i]);
 }
 

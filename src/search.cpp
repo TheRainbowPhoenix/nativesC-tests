@@ -11,6 +11,7 @@ static bool local_strstr(const char* haystack, const char* needle) {
     unsigned int h_len = String_Strlen(haystack);
     unsigned int n_len = String_Strlen(needle);
     if (n_len == 0) return true;
+    if (h_len < n_len) return false;
     for (unsigned int i = 0; i <= h_len - n_len; i++) {
         bool match = true;
         for (unsigned int j = 0; j < n_len; j++) {
@@ -28,12 +29,14 @@ void Search::show(const char* theme) {
 
 bool Search::search_in_file(int fd, const char* query, int* found_line, int* found_col) {
     if (fd < 0 || !query) return false;
-    (void)File_Lseek(fd, 0, FILE_SEEK_SET);
+    if (File_Lseek(fd, 0, FILE_SEEK_SET) < 0) return false;
     char buffer[1024]; int bytes; int line = 0;
     while ((bytes = File_Read(fd, buffer, sizeof(buffer) - 1)) > 0) {
         buffer[bytes] = '\0';
         if (local_strstr(buffer, query)) {
-            *found_line = line; *found_col = 0; return true;
+            if (found_line) *found_line = line;
+            if (found_col) *found_col = 0;
+            return true;
         }
         for(int i=0; i<bytes; i++) if(buffer[i] == '\n') line++;
     }

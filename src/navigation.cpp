@@ -22,6 +22,7 @@ char* FileBrowser::browse(const char* start_path, const char* theme) {
     if (File_FindFirst(path16, &findHandle, name, &findInfo) == FILE_OK) {
         do {
             char* n = (char*)Mem_Malloc(256);
+            if (!n) break;
             for(int i=0; i<256; i++) { n[i] = (char)name[i]; if(name[i]==0) break; }
             options[count++] = n;
         } while (File_FindNext(findHandle, name, &findInfo) == FILE_OK && count < 100);
@@ -37,7 +38,7 @@ int Goto::show(int max_lines, const char* theme) {
     (void)max_lines;
     char* input = ncinput::input("Go to Line:", ncinput::InputType::NumericInt, theme);
     if (input) {
-        int line = 0; // Simple atoi replacement
+        int line = 0;
         for(int i=0; input[i]; i++) if(input[i]>='0' && input[i]<='9') line = line*10 + (input[i]-'0');
         Mem_Free(input); return line;
     }
