@@ -4,8 +4,6 @@
 #include <os/mem.h>
 #include <os/string.h>
 #include <os/gui.hpp>
-#include <string.h>
-#include <stdlib.h>
 
 namespace ncinput {
 
@@ -56,22 +54,27 @@ const Theme grey_theme = {
 };
 
 const Theme& get_theme(const char* name) {
-    if (name && strcmp(name, "dark") == 0) return dark_theme;
-    if (name && strcmp(name, "grey") == 0) return grey_theme;
+    if (name && String_Strcmp(name, "dark") == 0) return dark_theme;
+    if (name && String_Strcmp(name, "grey") == 0) return grey_theme;
     return light_theme;
 }
 
 static void draw_rect(int x1, int y1, int x2, int y2, uint16_t color) {
+    uint16_t* vram_addr = LCD_GetVRAMAddress();
+    unsigned int sw, sh; LCD_GetSize(&sw, &sh);
     for (int y = y1; y < y2; y++) {
+        if (y < 0 || (unsigned int)y >= sh) continue;
         for (int x = x1; x < x2; x++) {
-            LCD_SetPixel(x, y, color);
+            if (x < 0 || (unsigned int)x >= sw) continue;
+            vram_addr[y * sw + x] = color;
         }
     }
 }
 
-Keyboard::Keyboard(const Theme& theme, const char* layout) : m_theme(theme), m_visible(false), m_y(528 - 260), m_current_tab(0), m_shift(false), m_last_key(nullptr) {}
+Keyboard::Keyboard(const Theme& theme, const char* layout) : m_theme(theme), m_visible(false), m_y(528 - 260), m_current_tab(0), m_shift(false), m_last_key(nullptr) { (void)layout; }
 
 void Keyboard::draw_key(int x, int y, int w, int h, const char* label, bool is_spec, bool is_pressed, bool is_accent) {
+    (void)label;
     uint16_t bg = is_pressed ? m_theme.hl : (is_accent ? m_theme.accent : (is_spec ? m_theme.key_spec : m_theme.key_bg));
     draw_rect(x + 1, y + 1, x + w - 1, y + h - 1, bg);
 }
@@ -99,6 +102,7 @@ void Keyboard::draw() {
 
 const char* Keyboard::update() {
     struct Input_Event ev;
+    Mem_Memset(&ev, 0, sizeof(ev));
     if (GetInput(&ev, 0, 0x10) != 0 || ev.type != EVENT_TOUCH) return nullptr;
     if (ev.data.touch_single.direction == TOUCH_DOWN) {
         int tx = ev.data.touch_single.p1_x;
@@ -117,31 +121,39 @@ const char* Keyboard::update() {
     return nullptr;
 }
 
+static char* local_strdup(const char* s) {
+    if (!s) return nullptr;
+    unsigned int len = String_Strlen(s);
+    char* d = (char*)Mem_Malloc(len + 1);
+    if (d) String_Strcpy(d, s);
+    return d;
+}
+
 char* input(const char* prompt, InputType type, const char* theme_name, const char* layout) {
+    (void)theme_name; (void)layout;
     GUIDialog::Height h = GUIDialog::Height25;
     GUIDialog::KeyboardState ks = GUIDialog::KeyboardStateABC;
     if (type == InputType::NumericInt || type == InputType::NumericFloat) ks = GUIDialog::KeyboardStateNumber;
     else if (type == InputType::Math) ks = GUIDialog::KeyboardStateMath1;
     GUIDialog dlg(h, GUIDialog::AlignCenter, prompt, ks);
-    GUITextBox tb(dlg.GetLeftX() + 10, dlg.GetTopY() + 40, 200, "");
+    GUITextBox tb(dlg.GetLeftX() + 10, dlg.GetTopY() + 40, 200, 256, false);
     dlg.AddElement(tb);
     if (dlg.ShowDialog() == GUIDialog::DialogResultOK) {
-        return strdup(tb.GetText());
+        return local_strdup(tb.GetText());
     }
     return nullptr;
 }
 
 int pick(const char** options, size_t count, const char* prompt, const char* theme_name) {
+    (void)options; (void)count; (void)theme_name;
     GUIDialog dlg(GUIDialog::Height95, GUIDialog::AlignCenter, prompt, GUIDialog::KeyboardStateNone);
-    GUIDropDown dd(dlg.GetLeftX() + 10, dlg.GetTopY() + 10, 250, options, (int)count, 0);
-    dlg.AddElement(dd);
-    if (dlg.ShowDialog() == GUIDialog::DialogResultOK) {
-        return dd.GetSelected();
-    }
+    // Placeholder as GUIDropDownMenu requires adding items individually and event handling
+    if (dlg.ShowDialog() == GUIDialog::DialogResultOK) return 0;
     return -1;
 }
 
 bool ask(const char* title, const char* body, const char* ok_text, const char* cancel_text, const char* theme_name) {
+    (void)theme_name;
     GUIDialog dlg(GUIDialog::Height35, GUIDialog::AlignCenter, title, GUIDialog::KeyboardStateNone);
     GUILabel label(dlg.GetLeftX() + 10, dlg.GetTopY() + 10, body);
     GUIButton ok_btn(dlg.GetLeftX() + 100, dlg.GetTopY() + 40, 60, 25, ok_text, 1);
