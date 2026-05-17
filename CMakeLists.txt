@@ -13,13 +13,13 @@ find_package(JustUI 1.0 REQUIRED)
 
 set(SOURCES
   src/main.cpp
-  src/ncinput.cpp
+  src/ncinput.c
   src/ced.cpp
-  src/filebrowser.cpp
-  src/goto.cpp
-  src/search.cpp
-  src/outline.cpp
-  src/problems.cpp
+  src/filebrowser.c
+  src/goto.c
+  src/search.c
+  src/outline.c
+  src/problems.c
   src/stubs.cpp
 )
 # Shared assets, fx-9860G-only assets and fx-CG-50-only assets

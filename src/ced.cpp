@@ -1,94 +1,22 @@
 #include "ced.hpp"
-#include "filebrowser.hpp"
-#include "search.hpp"
-#include "goto.hpp"
-#include "outline.hpp"
-#include "problems.hpp"
-extern "C" {
-#include <justui/jlayout.h>
-#include <justui/jlabel.h>
-#include <justui/jbutton.h>
-#include <gint/display.h>
-#include <gint/keyboard.h>
 #include <cstring>
 #include <cstdio>
-}
+#include <cctype>
 
 namespace ced {
 
-void to_os_path(const char* src, uint16_t* dest, int max_len) {
-    int i = 0;
-    while (src[i] && i < max_len - 1) {
-        dest[i] = (uint8_t)src[i];
-        i++;
-    }
-    dest[i] = 0;
+static char* search_cb(void* editor, int index) {
+    return ((Editor*)editor)->get_line(index);
 }
 
-FileHandle::FileHandle() : fd(-1) {}
-FileHandle::~FileHandle() { close(); }
-
-bool FileHandle::open(const char* path, int mode) {
-    close();
-    uint16_t os_path[128];
-    to_os_path(path, os_path, 128);
-    gint_world_switch();
-    fd = BFile_Open(os_path, mode);
-    gint_world_switch();
-    return fd >= 0;
-}
-
-void FileHandle::close() {
-    if (fd >= 0) {
-        gint_world_switch();
-        BFile_Close(fd);
-        gint_world_switch();
-        fd = -1;
-    }
-}
-
-int FileHandle::size() {
-    if (fd < 0) return -1;
-    gint_world_switch();
-    int s = BFile_Size(fd);
-    gint_world_switch();
-    return s;
-}
-
-int FileHandle::read(void* data, int sz, int whence) {
-    if (fd < 0) return -1;
-    gint_world_switch();
-    int r = BFile_Read(fd, data, sz, whence);
-    gint_world_switch();
-    return r;
-}
-
-int FileHandle::write(const void* data, int sz) {
-    if (fd < 0) return -1;
-    gint_world_switch();
-    int r = BFile_Write(fd, data, sz);
-    gint_world_switch();
-    return r;
-}
-
-int FileHandle::seek(int offset) {
-    if (fd < 0) return -1;
-    gint_world_switch();
-    int r = BFile_Seek(fd, offset);
-    gint_world_switch();
-    return r;
-}
-
-Editor::Editor() : total_lines(0), vy(0), cx(0), cy(0), current_theme(ncinput::ThemeName::Light), word_wrap(false), running(true) {
+Editor::Editor() : total_lines(0), vy(0), cx(0), cy(0), current_theme(NC_THEME_LIGHT), word_wrap(false), running(true) {
     filename[0] = '\0';
     for (int i = 0; i < CACHE_SIZE; i++) cache[i].index = -1;
     for (int i = 0; i < TOKEN_CACHE_LINES; i++) tok_cache[i].index = -1;
     timer_ticks = 0;
-    scene = (jscene*)jscene_create_fullscreen(nullptr);
-    jlayout_set_vbox((jwidget*)scene)->spacing = 0;
 }
 
-Editor::~Editor() { if (scene) jwidget_destroy((jwidget*)scene); }
+Editor::~Editor() {}
 
 void Editor::load_config() {
     FileHandle cfg;
@@ -96,8 +24,8 @@ void Editor::load_config() {
         char buf[256]; int r = cfg.read(buf, 255);
         if (r > 0) {
             buf[r] = '\0';
-            if (strstr(buf, "theme=dark")) current_theme = ncinput::ThemeName::Dark;
-            else if (strstr(buf, "theme=grey")) current_theme = ncinput::ThemeName::Grey;
+            if (strstr(buf, "theme=dark")) current_theme = NC_THEME_DARK;
+            else if (strstr(buf, "theme=grey")) current_theme = NC_THEME_GREY;
             if (strstr(buf, "wrap=true")) word_wrap = true;
         }
     }
@@ -105,7 +33,7 @@ void Editor::load_config() {
 
 void Editor::load_file(const char* path) {
     if (!file.open(path, BFile_ReadOnly)) {
-        ncinput::ask("Error", "Could not open file.", "OK", "Cancel", current_theme);
+        nc_ask("Error", "Could not open file.", "OK", "Cancel", current_theme);
         return;
     }
     strncpy(filename, path, sizeof(filename)-1); filename[sizeof(filename)-1] = '\0';
@@ -163,22 +91,22 @@ void Editor::draw_line(int x, int y, int line_idx, const char* line) {
     int cur_x = x, last_pos = 0;
     for (int i = 0; i < tok_cache[cache_idx].count; i++) {
         Token& t = tok_cache[cache_idx].tokens[i];
-        if (t.start > last_pos) { char tmp[MAX_LINE_LEN]; int len = t.start - last_pos; strncpy(tmp, line + last_pos, len); tmp[len] = '\0'; dtext(cur_x, y, C_BLACK, tmp); int w; dsize(tmp, nullptr, &w, nullptr); cur_x += w; }
-        char tmp[MAX_LINE_LEN]; strncpy(tmp, line + t.start, t.len); tmp[t.len] = '\0'; dtext(cur_x, y, t.color, tmp); int w; dsize(tmp, nullptr, &w, nullptr); cur_x += w;
+        if (t.start > last_pos) { char tmp[MAX_LINE_LEN]; int len = t.start - last_pos; strncpy(tmp, line + last_pos, len); tmp[len] = '\0'; dtext(cur_x, y, C_BLACK, tmp); int w; dsize(tmp, NULL, &w, NULL); cur_x += w; }
+        char tmp[MAX_LINE_LEN]; strncpy(tmp, line + t.start, t.len); tmp[t.len] = '\0'; dtext(cur_x, y, t.color, tmp); int w; dsize(tmp, NULL, &w, NULL); cur_x += w;
         last_pos = t.start + t.len;
     }
     if (line[last_pos]) dtext(cur_x, y, C_BLACK, line + last_pos);
 }
 
 void Editor::render() {
-    ncinput::Theme const& t = ncinput::get_theme(current_theme); dclear(t.modal_bg); int y = 5;
+    nc_theme_t const* t = nc_get_theme(current_theme); dclear(t->modal_bg); int y = 5;
     for (int i = vy; i < vy + 12 && i < total_lines; i++) {
         const char* line = get_line(i); if (!line) line = "";
-        if (i == cy) drect(0, y, 320, y + 18, t.hl);
+        if (i == cy) drect(0, y, 320, y + 18, t->hl);
         draw_line(5, y, i, line);
         if (i == cy) {
-            int cw = 0; if (cx > 0) { char tmp[MAX_LINE_LEN]; int len = (cx < (int)strlen(line)) ? cx : (int)strlen(line); strncpy(tmp, line, len); tmp[len] = '\0'; dnsize(tmp, len, nullptr, &cw, nullptr); }
-            drect(5 + cw, y, 5 + cw + 1, y + 18, t.txt);
+            int cw = 0; if (cx > 0) { char tmp[MAX_LINE_LEN]; int len = (cx < (int)strlen(line)) ? cx : (int)strlen(line); strncpy(tmp, line, len); tmp[len] = '\0'; dnsize(tmp, len, NULL, &cw, NULL); }
+            drect(5 + cw, y, 5 + cw + 1, y + 18, t->txt);
         }
         y += 20;
     }
@@ -186,14 +114,14 @@ void Editor::render() {
 
 void Editor::do_menu() {
     const char* options[] = {"Open File", "Save File", "Search", "Go To", "Outline", "Problems", "Exit"};
-    int choice = ncinput::pick(options, 7, "Menu", current_theme);
+    int choice = nc_pick(options, 7, "Menu", current_theme);
     switch (choice) {
-        case 0: { char path[128]; if (filebrowser::show(path, current_theme)) load_file(path); break; }
+        case 0: { char path[128]; if (filebrowser_show(path, current_theme)) load_file(path); break; }
         case 1: save_file(); break;
-        case 2: search::show(this, current_theme); break;
-        case 3: { int target = goto_line::show(total_lines, current_theme); if (target >= 0) { cy = target; if (cy < vy) vy = cy; if (cy >= vy + 12) vy = cy - 11; } break; }
-        case 4: { int target = outline::show(filename, current_theme); if (target >= 0) { cy = target; if (cy < vy) vy = cy; if (cy >= vy + 12) vy = cy - 11; } break; }
-        case 5: problems::show(current_theme); break;
+        case 2: search_show(this, search_cb, current_theme); break;
+        case 3: { int target = goto_line_show(total_lines, current_theme); if (target >= 0) { cy = target; if (cy < vy) vy = cy; if (cy >= vy + 12) vy = cy - 11; } break; }
+        case 4: { int target = outline_show(filename, current_theme); if (target >= 0) { cy = target; if (cy < vy) vy = cy; if (cy >= vy + 12) vy = cy - 11; } break; }
+        case 5: problems_show(current_theme); break;
         case 6: running = false; break;
     }
 }
@@ -212,8 +140,17 @@ void Editor::run() {
 }
 
 void Editor::save_file(const char* path) {
-    if (strlen(filename) == 0 && path == nullptr) { ncinput::ask("Error", "No file to save.", "OK", "Cancel", current_theme); return; }
-    ncinput::ask("Save", "Save is limited to rewriting existing files on Fugue FS.", "OK", "Cancel", current_theme);
+    if (strlen(filename) == 0 && path == nullptr) { nc_ask("Error", "No file to save.", "OK", "Cancel", current_theme); return; }
+    nc_ask("Save", "Save is limited to rewriting existing files on Fugue FS.", "OK", "Cancel", current_theme);
 }
+
+FileHandle::FileHandle() : fd(-1) {}
+FileHandle::~FileHandle() { close(); }
+bool FileHandle::open(const char* path, int mode) { close(); uint16_t os_path[128]; nc_to_os_path(path, os_path, 128); gint_world_switch(); fd = BFile_Open(os_path, mode); gint_world_switch(); return fd >= 0; }
+void FileHandle::close() { if (fd >= 0) { gint_world_switch(); BFile_Close(fd); gint_world_switch(); fd = -1; } }
+int FileHandle::size() { if (fd < 0) return -1; gint_world_switch(); int s = BFile_Size(fd); gint_world_switch(); return s; }
+int FileHandle::read(void* data, int sz, int whence) { if (fd < 0) return -1; gint_world_switch(); int r = BFile_Read(fd, data, sz, whence); gint_world_switch(); return r; }
+int FileHandle::write(const void* data, int sz) { if (fd < 0) return -1; gint_world_switch(); int r = BFile_Write(fd, data, sz); gint_world_switch(); return r; }
+int FileHandle::seek(int offset) { if (fd < 0) return -1; gint_world_switch(); int r = BFile_Seek(fd, offset); gint_world_switch(); return r; }
 
 }

@@ -1,19 +1,13 @@
-#include "filebrowser.hpp"
-extern "C" {
+#include "filebrowser.h"
 #include <justui/jfileselect.h>
 #include <justui/jscene.h>
 #include <gint/display.h>
-#include <cstring>
-}
+#include <string.h>
 
-namespace filebrowser {
-
-bool show(char* result_path, ncinput::ThemeName theme) {
+bool filebrowser_show(char* result_path, nc_theme_name_t theme) {
     (void)theme;
     uint16_t path16[128];
-    // jfileselect usually returns a FONTCHARACTER (uint16_t) path
-    if (jfileselect(path16, nullptr, "Select File") == 0) {
-        // Convert uint16_t to char (simplistic)
+    if (jfileselect(path16, NULL, "Select File") == 0) {
         int i = 0;
         while (path16[i] && i < 127) {
             result_path[i] = (char)path16[i];
@@ -23,6 +17,4 @@ bool show(char* result_path, ncinput::ThemeName theme) {
         return true;
     }
     return false;
-}
-
 }

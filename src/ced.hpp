@@ -6,17 +6,17 @@
 
 extern "C" {
 #include <gint/display.h>
-#include <justui/jscene.h>
 #include <gint/gint.h>
 #include <gint/bfile.h>
+#include "ncinput.h"
+#include "search.h"
+#include "outline.h"
+#include "problems.h"
+#include "goto.h"
+#include "filebrowser.h"
 }
 
-#include "ncinput.hpp"
-
 namespace ced {
-
-// Helper to convert char* to uint16_t* (FONTCHARACTER)
-void to_os_path(const char* src, uint16_t* dest, int max_len);
 
 // RAII File Descriptor
 class FileHandle {
@@ -73,7 +73,7 @@ private:
 
     int timer_ticks;
 
-    ncinput::ThemeName current_theme;
+    nc_theme_name_t current_theme;
     bool word_wrap;
 
     struct Token {
@@ -92,7 +92,7 @@ private:
     void update_tokens(int line_idx, const char* line);
     void draw_line(int x, int y, int line_idx, const char* line);
 
-    jscene* scene;
+    void* scene; // Opaque pointer to avoid JustUI header in C++
     bool running;
     FileHandle file;
 };

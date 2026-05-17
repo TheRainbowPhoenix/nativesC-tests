@@ -1,22 +1,17 @@
-#include "ncinput.hpp"
-extern "C" {
+#include "ncinput.h"
 #include <justui/jwidget-api.h>
 #include <justui/jlabel.h>
 #include <justui/jbutton.h>
 #include <justui/jlayout.h>
 #include <justui/jscene.h>
 #include <justui/jscrolledlist.h>
-}
 #include <gint/display.h>
 #include <gint/keyboard.h>
-#include <cstring>
-#include <cctype>
-#include <cstdlib>
-#include <new>
+#include <string.h>
+#include <ctype.h>
+#include <stdlib.h>
 
-namespace ncinput {
-
-static const Theme LightTheme = {
+static const nc_theme_t LightTheme = {
     .modal_bg = C_WHITE,
     .kbd_bg   = C_WHITE,
     .key_bg   = C_WHITE,
@@ -30,7 +25,7 @@ static const Theme LightTheme = {
     .check    = C_WHITE
 };
 
-static const Theme DarkTheme = {
+static const nc_theme_t DarkTheme = {
     .modal_bg = C_RGB(7, 7, 8),
     .kbd_bg   = C_RGB(7, 7, 8),
     .key_bg   = C_RGB(7, 7, 8),
@@ -44,7 +39,7 @@ static const Theme DarkTheme = {
     .check    = C_WHITE
 };
 
-static const Theme GreyTheme = {
+static const nc_theme_t GreyTheme = {
     .modal_bg = C_LIGHT,
     .kbd_bg   = C_LIGHT,
     .key_bg   = C_WHITE,
@@ -58,12 +53,12 @@ static const Theme GreyTheme = {
     .check    = C_WHITE
 };
 
-Theme const& get_theme(ThemeName name) {
+nc_theme_t const* nc_get_theme(nc_theme_name_t name) {
     switch (name) {
-        case ThemeName::Dark: return DarkTheme;
-        case ThemeName::Grey: return GreyTheme;
-        case ThemeName::Light:
-        default: return LightTheme;
+        case NC_THEME_DARK: return &DarkTheme;
+        case NC_THEME_GREY: return &GreyTheme;
+        case NC_THEME_LIGHT:
+        default: return &LightTheme;
     }
 }
 
@@ -83,17 +78,17 @@ static const char* LAYOUT_SYM[4][10] = {
     {"{", "}", "[", "]", "^", "~", "`", "|", "<", ">"}
 };
 
-struct KeyRect {
+typedef struct {
     int x, y, w, h;
     const char* label;
     const char* val;
     bool is_spec;
     bool is_acc;
-};
+} KeyRect;
 
-struct nkeyboard {
+typedef struct {
     jwidget widget;
-    ThemeName theme_name;
+    nc_theme_name_t theme_name;
     int current_tab;
     bool shift;
     const char* last_key_ptr;
@@ -102,10 +97,10 @@ struct nkeyboard {
     char* target_buffer;
     int max_len;
     bool* finished;
-};
+} nkeyboard_t;
 
 static int keyboard_type_id = -1;
-uint16_t NKEYBOARD_KEY_PRESSED;
+static uint16_t NKEYBOARD_KEY_PRESSED;
 
 static int get_math_rects(int k_y, KeyRect* out) {
     int start_y = k_y + 30;
@@ -115,20 +110,20 @@ static int get_math_rects(int k_y, KeyRect* out) {
     int numpad_w = center_w / 3;
     int n = 0;
     const char* l_chars[] = {"+", "-", "*", "/"};
-    for (int i = 0; i < 4; i++) out[n++] = {0, start_y + i*row_h, side_w, row_h, l_chars[i], l_chars[i], true, false};
+    for (int i = 0; i < 4; i++) out[n++] = (KeyRect){0, start_y + i*row_h, side_w, row_h, l_chars[i], l_chars[i], true, false};
     struct { const char* disp; const char* val; bool spec; bool acc; } r_chars[] = {
         {"%", "%", true, false}, {" ", " ", true, false}, {"<-", "BACKSPACE", true, false}, {"EXE", "ENTER", false, true}
     };
-    for (int i = 0; i < 4; i++) out[n++] = {320 - side_w, start_y + i*row_h, side_w, row_h, r_chars[i].disp, r_chars[i].val, r_chars[i].spec, r_chars[i].acc};
+    for (int i = 0; i < 4; i++) out[n++] = (KeyRect){320 - side_w, start_y + i*row_h, side_w, row_h, r_chars[i].disp, r_chars[i].val, r_chars[i].spec, r_chars[i].acc};
     const char* nums[3][3] = {{"1","2","3"}, {"4","5","6"}, {"7","8","9"}};
-    for (int r = 0; r < 3; r++) for (int c = 0; c < 3; c++) out[n++] = {side_w + c*numpad_w, start_y + r*row_h, numpad_w, row_h, nums[r][c], nums[r][c], false, false};
+    for (int r = 0; r < 3; r++) for (int c = 0; c < 3; c++) out[n++] = (KeyRect){side_w + c*numpad_w, start_y + r*row_h, numpad_w, row_h, nums[r][c], nums[r][c], false, false};
     const char* bot_row[] = {",", "#", "0", "=", "."};
     int widths[] = {1, 1, 2, 1, 1};
     int unit_w = center_w / 6;
     int cur_x = side_w;
     for (int i = 0; i < 5; i++) {
         int w = widths[i] * unit_w;
-        out[n++] = {cur_x, start_y + 3*row_h, w, row_h, bot_row[i], bot_row[i], false, false};
+        out[n++] = (KeyRect){cur_x, start_y + 3*row_h, w, row_h, bot_row[i], bot_row[i], false, false};
         cur_x += w;
     }
     return n;
@@ -139,40 +134,40 @@ static int get_numpad_rects(int k_y, KeyRect* out) {
     int action_w = 80;
     int digit_w = (320 - action_w) / 3;
     int n = 0;
-    out[n++] = {320 - action_w, k_y, action_w, row_h, "<-", "BACKSPACE", true, false};
-    out[n++] = {320 - action_w, k_y + row_h, action_w, row_h * 3, "EXE", "ENTER", false, true};
+    out[n++] = (KeyRect){320 - action_w, k_y, action_w, row_h, "<-", "BACKSPACE", true, false};
+    out[n++] = (KeyRect){320 - action_w, k_y + row_h, action_w, row_h * 3, "EXE", "ENTER", false, true};
     const char* nums[3][3] = {{"1","2","3"}, {"4","5","6"}, {"7","8","9"}};
-    for (int r = 0; r < 3; r++) for (int c = 0; c < 3; c++) out[n++] = {c * digit_w, k_y + r * row_h, digit_w, row_h, nums[r][c], nums[r][c], false, false};
-    out[n++] = {0, k_y + 3 * row_h, digit_w, row_h, "-", "-", false, false};
-    out[n++] = {digit_w, k_y + 3 * row_h, digit_w, row_h, "0", "0", false, false};
-    out[n++] = {digit_w * 2, k_y + 3 * row_h, digit_w, row_h, ".", ".", false, false};
+    for (int r = 0; r < 3; r++) for (int c = 0; c < 3; c++) out[n++] = (KeyRect){c * digit_w, k_y + r * row_h, digit_w, row_h, nums[r][c], nums[r][c], false, false};
+    out[n++] = (KeyRect){0, k_y + 3 * row_h, digit_w, row_h, "-", "-", false, false};
+    out[n++] = (KeyRect){digit_w, k_y + 3 * row_h, digit_w, row_h, "0", "0", false, false};
+    out[n++] = (KeyRect){digit_w * 2, k_y + 3 * row_h, digit_w, row_h, ".", ".", false, false};
     return n;
 }
 
-static void draw_key_impl(int x, int y, int w, int h, const char* label, bool is_special, bool is_pressed, bool is_accent, Theme const& t) {
-    int bg = is_pressed ? t.hl : (is_accent ? t.accent : (is_special ? t.key_spec : t.key_bg));
-    int txt_col = is_accent ? t.txt_acc : t.txt;
+static void draw_key_impl(int x, int y, int w, int h, const char* label, bool is_special, bool is_pressed, bool is_accent, nc_theme_t const* t) {
+    int bg = is_pressed ? t->hl : (is_accent ? t->accent : (is_special ? t->key_spec : t->key_bg));
+    int txt_col = is_accent ? t->txt_acc : t->txt;
     drect(x + 1, y + 1, x + w - 1, y + h - 1, bg);
-    drect_border(x, y, x + w, y + h, C_NONE, 1, t.key_spec);
+    drect_border(x, y, x + w, y + h, C_NONE, 1, t->key_spec);
     dtext_opt(x + w/2, y + h/2, txt_col, C_NONE, DTEXT_CENTER, DTEXT_MIDDLE, label, -1);
 }
 
 static void nkeyboard_poly_render(void* w0, int x, int y) {
-    nkeyboard* k = (nkeyboard*)w0;
+    nkeyboard_t* k = (nkeyboard_t*)w0;
     if (!k->visible) return;
-    Theme const& t = get_theme(k->theme_name);
-    drect(x, y, x + 320, y + 260, t.kbd_bg);
-    dhline(y, t.key_spec);
+    nc_theme_t const* t = nc_get_theme(k->theme_name);
+    drect(x, y, x + 320, y + 260, t->kbd_bg);
+    dhline(y, t->key_spec);
     if (k->enable_tabs) {
         int tab_w = 320 / 3;
         static const char* tabs[] = {"ABC", "Sym", "Math"};
         for (int i = 0; i < 3; i++) {
             int tx = x + i * tab_w;
             bool is_active = (i == k->current_tab);
-            drect(tx, y, tx + tab_w, y + 30, is_active ? t.kbd_bg : t.key_spec);
-            drect_border(tx, y, tx + tab_w, y + 30, C_NONE, 1, t.key_spec);
-            if (is_active) drect(tx + 1, y + 29, tx + tab_w - 1, y + 31, t.kbd_bg);
-            dtext_opt(tx + tab_w/2, y + 15, t.txt, C_NONE, DTEXT_CENTER, DTEXT_MIDDLE, tabs[i], -1);
+            drect(tx, y, tx + tab_w, y + 30, is_active ? t->kbd_bg : t->key_spec);
+            drect_border(tx, y, tx + tab_w, y + 30, C_NONE, 1, t->key_spec);
+            if (is_active) drect(tx + 1, y + 29, tx + tab_w - 1, y + 31, t->kbd_bg);
+            dtext_opt(tx + tab_w/2, y + 15, t->txt, C_NONE, DTEXT_CENTER, DTEXT_MIDDLE, tabs[i], -1);
         }
         if (k->current_tab == 2) {
             KeyRect math_keys[32]; int n = get_math_rects(0, math_keys);
@@ -198,7 +193,7 @@ static void nkeyboard_poly_render(void* w0, int x, int y) {
 }
 
 static bool nkeyboard_poly_event(void* w0, jevent e) {
-    nkeyboard* k = (nkeyboard*)w0;
+    nkeyboard_t* k = (nkeyboard_t*)w0;
     if (e.type == JWIDGET_KEY) {
         key_event_t ev = e.key;
         if (ev.type == KEYEV_TOUCH_DOWN || ev.type == KEYEV_TOUCH_UP) {
@@ -206,7 +201,7 @@ static bool nkeyboard_poly_event(void* w0, jevent e) {
             if (ty < 0 || ty > 260) return false;
             if (ev.type == KEYEV_TOUCH_DOWN) {
                 if (k->enable_tabs && ty < 30) { k->current_tab = tx / (320/3); if (k->current_tab > 2) k->current_tab = 2; k->widget.update = 1; return true; }
-                const char* pressed = nullptr; static char single_char_val[2] = {0, 0};
+                const char* pressed = NULL; static char single_char_val[2] = {0, 0};
                 if (k->enable_tabs) {
                     if (k->current_tab == 2) {
                         KeyRect math_keys[32]; int n = get_math_rects(0, math_keys);
@@ -236,51 +231,65 @@ static bool nkeyboard_poly_event(void* w0, jevent e) {
                     }
                     jevent ne; ne.source = k; ne.type = NKEYBOARD_KEY_PRESSED; jwidget_emit(k, ne); return true;
                 }
-            } else if (ev.type == KEYEV_TOUCH_UP) { k->last_key_ptr = nullptr; k->widget.update = 1; return true; }
+            } else if (ev.type == KEYEV_TOUCH_UP) { k->last_key_ptr = NULL; k->widget.update = 1; return true; }
         }
     }
     return false;
 }
 
-static jwidget_poly type_nkeyboard = {
-    .name = "nkeyboard",
-    .csize = [](void* w) { ((jwidget*)w)->w = 320; ((jwidget*)w)->h = 260; },
-    .render = nkeyboard_poly_render,
-    .event = nkeyboard_poly_event,
-    .destroy = NULL, // No custom destruction needed for malloc'd widget itself as jwidget_destroy handles it
-};
-
-nkeyboard* nkeyboard_create(void* parent, ThemeName theme, bool enable_tabs) {
-    if (keyboard_type_id < 0) return nullptr;
-    nkeyboard* k = (nkeyboard*)malloc(sizeof(nkeyboard));
-    if (!k) return nullptr;
-    memset(k, 0, sizeof(nkeyboard));
-    jwidget_init(&k->widget, keyboard_type_id, parent);
-    k->theme_name = theme; k->enable_tabs = enable_tabs;
-    jwidget_set_focus_policy(k, J_FOCUS_POLICY_ACCEPT);
-    return k;
+static void nkeyboard_poly_csize(void* w0) {
+    jwidget* w = (jwidget*)w0;
+    w->w = 320; w->h = 260;
 }
 
-int input(char* buffer, int max_len, const char* prompt, const char* type, ThemeName theme) {
-    Theme const& t = get_theme(theme);
-    jscene* scene = (jscene*)jscene_create_fullscreen(nullptr);
+static void nkeyboard_poly_destroy(void* w0) {
+    // malloc was used in nkeyboard_create, JustUI will free() the jwidget pointer
+    // since this is called from jwidget_destroy.
+    (void)w0;
+}
+
+static jwidget_poly type_nkeyboard = {
+    .name = "nkeyboard",
+    .csize = nkeyboard_poly_csize,
+    .layout = NULL,
+    .render = nkeyboard_poly_render,
+    .event = nkeyboard_poly_event,
+    .destroy = nkeyboard_poly_destroy,
+};
+
+static jwidget* nkeyboard_create(void* parent, nc_theme_name_t theme, bool enable_tabs) {
+    if (keyboard_type_id < 0) return NULL;
+    nkeyboard_t* k = (nkeyboard_t*)malloc(sizeof(nkeyboard_t));
+    if (!k) return NULL;
+    memset(k, 0, sizeof(nkeyboard_t));
+    jwidget_init(&k->widget, keyboard_type_id, parent);
+    k->theme_name = theme; k->enable_tabs = enable_tabs;
+    k->visible = true;
+    jwidget_set_focus_policy(k, J_FOCUS_POLICY_ACCEPT);
+    return (jwidget*)k;
+}
+
+int nc_input(char* buffer, int max_len, const char* prompt, const char* type, nc_theme_name_t theme) {
+    nc_theme_t const* t = nc_get_theme(theme);
+    jscene* scene = (jscene*)jscene_create_fullscreen(NULL);
     jlayout_set_vbox((jwidget*)scene)->spacing = 0;
-    jwidget_set_background((jwidget*)scene, t.modal_bg);
+    jwidget_set_background((jwidget*)scene, t->modal_bg);
     jwidget* header = jwidget_create((jwidget*)scene);
-    jlayout_set_hbox(header); jwidget_set_fixed_height(header, 40); jwidget_set_background(header, t.accent);
-    jlabel_set_text_color(jlabel_create(prompt, header), t.txt_acc);
+    jlayout_set_hbox(header); jwidget_set_fixed_height(header, 40); jwidget_set_background(header, t->accent);
+    jlabel_set_text_color(jlabel_create(prompt, header), t->txt_acc);
     jwidget* body = jwidget_create((jwidget*)scene);
     jlayout_set_vbox(body); jwidget_set_stretch(body, 1, 1, false);
-    jlabel* lbl_text = jlabel_create("_", body); jlabel_set_text_color(lbl_text, t.txt);
+    jlabel* lbl_text = jlabel_create("_", body); jlabel_set_text_color(lbl_text, t->txt);
     bool enable_tabs = !strstr(type, "numeric"), finished = false;
-    nkeyboard* kbd = nkeyboard_create((jwidget*)scene, theme, enable_tabs);
+    jwidget* kbd_w = nkeyboard_create((jwidget*)scene, theme, enable_tabs);
+    nkeyboard_t* kbd = (nkeyboard_t*)kbd_w;
     if (kbd && strcmp(type, "math") == 0) kbd->current_tab = 2;
     if (kbd) { kbd->target_buffer = buffer; kbd->max_len = max_len; kbd->finished = &finished; }
     int result = 0; char display_buf[max_len + 2];
     while (!finished) {
         jevent e = jscene_run(scene);
         if (e.type == JSCENE_PAINT) {
-            dclear(t.modal_bg); strcpy(display_buf, buffer); strcat(display_buf, "_");
+            dclear(t->modal_bg); strcpy(display_buf, buffer); strcat(display_buf, "_");
             jlabel_set_text(lbl_text, display_buf); jscene_render(scene); dupdate();
         } else if (e.type == JWIDGET_KEY && e.key.type == KEYEV_DOWN) {
             if (e.key.key == KEY_EXIT) { result = -1; break; }
@@ -291,58 +300,61 @@ int input(char* buffer, int max_len, const char* prompt, const char* type, Theme
     return result;
 }
 
-static const char** pick_options_arr = nullptr;
-static void pick_info_fn(::jlist*, int, ::jlist_item_info* info) { info->selectable = info->triggerable = true; info->natural_height = 20; }
-static void pick_paint_fn(int x, int y, int, int, ::jlist*, int i, bool sel) { if (pick_options_arr && i >= 0) dtext(x + 5, y + 2, sel ? C_WHITE : C_BLACK, pick_options_arr[i]); }
+static const char** pick_options_arr = NULL;
+static void pick_info_fn(jlist* l, int i, jlist_item_info* info) { (void)l; (void)i; info->selectable = info->triggerable = true; info->natural_height = 20; }
+static void pick_paint_fn(int x, int y, int w, int h, jlist* l, int i, bool sel) { (void)w; (void)h; (void)l; if (pick_options_arr && i >= 0) dtext(x + 5, y + 2, sel ? C_WHITE : C_BLACK, pick_options_arr[i]); }
 
-int pick(const char** options, int num_options, const char* prompt, ThemeName theme) {
-    Theme const& t = get_theme(theme);
-    jscene* scene = (jscene*)jscene_create_fullscreen(nullptr);
-    jlayout_set_vbox((jwidget*)scene)->spacing = 0; jwidget_set_background((jwidget*)scene, t.modal_bg);
+int nc_pick(const char** options, int num_options, const char* prompt, nc_theme_name_t theme) {
+    nc_theme_t const* t = nc_get_theme(theme);
+    jscene* scene = (jscene*)jscene_create_fullscreen(NULL);
+    jlayout_set_vbox((jwidget*)scene)->spacing = 0; jwidget_set_background((jwidget*)scene, t->modal_bg);
     jwidget* header = jwidget_create((jwidget*)scene);
-    jlayout_set_hbox(header); jwidget_set_fixed_height(header, 40); jwidget_set_background(header, t.accent);
-    jlabel_set_text_color(jlabel_create(prompt, header), t.txt_acc);
+    jlayout_set_hbox(header); jwidget_set_fixed_height(header, 40); jwidget_set_background(header, t->accent);
+    jlabel_set_text_color(jlabel_create(prompt, header), t->txt_acc);
     pick_options_arr = options;
-    jscrolledlist* sl = (jscrolledlist*)jscrolledlist_create((jlist_item_info_function)pick_info_fn, (jlist_item_paint_function)pick_paint_fn, (jwidget*)scene);
-    jlist_update_model((::jlist*)sl->list, num_options, nullptr);
+    jscrolledlist* sl = (jscrolledlist*)jscrolledlist_create(pick_info_fn, pick_paint_fn, (jwidget*)scene);
+    jlist_update_model(sl->list, num_options, NULL);
     jwidget_set_stretch((jwidget*)sl, 1, 1, false);
     jwidget* footer = jwidget_create((jwidget*)scene);
-    jlayout_set_hbox(footer); jwidget_set_fixed_height(footer, 45); jwidget_set_background(footer, t.key_spec);
+    jlayout_set_hbox(footer); jwidget_set_fixed_height(footer, 45); jwidget_set_background(footer, t->key_spec);
     jbutton_create("Select", footer);
     int result = -1; bool running = true;
     while (running) {
         jevent e = jscene_run(scene);
-        if (e.type == JSCENE_PAINT) { dclear(t.modal_bg); jscene_render(scene); dupdate(); }
-        else if (e.type == JBUTTON_TRIGGERED) { result = jlist_selected_item((::jlist*)sl->list); running = false; }
+        if (e.type == JSCENE_PAINT) { dclear(t->modal_bg); jscene_render(scene); dupdate(); }
+        else if (e.type == JBUTTON_TRIGGERED) { result = jlist_selected_item(sl->list); running = false; }
         else if (e.type == JLIST_ITEM_TRIGGERED) { result = (int)e.data; running = false; }
         else if (e.type == JWIDGET_KEY && e.key.type == KEYEV_DOWN && e.key.key == KEY_EXIT) { result = -1; running = false; }
     }
     jwidget_destroy((jwidget*)scene); return result;
 }
 
-bool ask(const char* title, const char* body, const char* ok_text, const char* cancel_text, ThemeName theme) {
-    Theme const& t = get_theme(theme);
-    jscene* scene = (jscene*)jscene_create_fullscreen(nullptr);
-    jlayout_set_vbox((jwidget*)scene)->spacing = 0; jwidget_set_background((jwidget*)scene, t.modal_bg);
+bool nc_ask(const char* title, const char* body, const char* ok_text, const char* cancel_text, nc_theme_name_t theme) {
+    nc_theme_t const* t = nc_get_theme(theme);
+    jscene* scene = (jscene*)jscene_create_fullscreen(NULL);
+    jlayout_set_vbox((jwidget*)scene)->spacing = 0; jwidget_set_background((jwidget*)scene, t->modal_bg);
     jwidget* header = jwidget_create((jwidget*)scene);
-    jlayout_set_hbox(header); jwidget_set_fixed_height(header, 40); jwidget_set_background(header, t.accent);
-    jlabel_set_text_color(jlabel_create(title, header), t.txt_acc);
+    jlayout_set_hbox(header); jwidget_set_fixed_height(header, 40); jwidget_set_background(header, t->accent);
+    jlabel_set_text_color(jlabel_create(title, header), t->txt_acc);
     jwidget* body_cont = jwidget_create((jwidget*)scene);
     jlayout_set_vbox(body_cont); jwidget_set_stretch(body_cont, 1, 1, false);
-    jlabel_set_text_color(jlabel_create(body, body_cont), t.txt);
+    jlabel_set_text_color(jlabel_create(body, body_cont), t->txt);
     jwidget* footer = jwidget_create((jwidget*)scene);
-    jlayout_set_hbox(footer); jwidget_set_fixed_height(footer, 45); jwidget_set_background(footer, t.key_spec);
+    jlayout_set_hbox(footer); jwidget_set_fixed_height(footer, 45); jwidget_set_background(footer, t->key_spec);
     jbutton* btn_cancel = jbutton_create(cancel_text, footer), *btn_ok = jbutton_create(ok_text, footer);
     bool running = true, result = false;
     while (running) {
         jevent e = jscene_run(scene);
-        if (e.type == JSCENE_PAINT) { dclear(t.modal_bg); jscene_render(scene); dupdate(); }
+        if (e.type == JSCENE_PAINT) { dclear(t->modal_bg); jscene_render(scene); dupdate(); }
         else if (e.type == JBUTTON_TRIGGERED) { if (e.source == btn_ok) result = true; running = false; }
         else if (e.type == JWIDGET_KEY && e.key.type == KEYEV_DOWN && e.key.key == KEY_EXIT) running = false;
     }
     jwidget_destroy((jwidget*)scene); return result;
 }
 
-void init() { if (keyboard_type_id < 0) { keyboard_type_id = j_register_widget(&type_nkeyboard); NKEYBOARD_KEY_PRESSED = j_register_event(); } }
-
+void nc_init(void) {
+    if (keyboard_type_id < 0) {
+        keyboard_type_id = j_register_widget(&type_nkeyboard);
+        NKEYBOARD_KEY_PRESSED = j_register_event();
+    }
 }

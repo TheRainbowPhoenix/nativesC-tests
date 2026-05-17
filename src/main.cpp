@@ -1,8 +1,9 @@
 #include "ced.hpp"
-#include "ncinput.hpp"
+#include "ncinput.h"
+#include <new>
 
 int main() {
-    ncinput::init();
+    nc_init();
 
     // Allocate Editor on heap to avoid stack overflow
     ced::Editor* editor = new (std::nothrow) ced::Editor();
