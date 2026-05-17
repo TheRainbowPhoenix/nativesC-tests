@@ -67,12 +67,38 @@ static char* local_strdup(const char* s) {
 }
 
 char* input(const char* prompt, InputType type, const char* theme_name, const char* layout) {
-    (void)type; (void)theme_name; (void)layout;
-    nui::NDialog dlg(nui::NDialog::Height25, prompt);
+    (void)type; const Theme& theme = get_theme(theme_name); (void)layout;
+    nui::NDialog dlg(nui::NDialog::Height95, prompt);
     nui::NTextBox tb(dlg.GetLeftX() + 10, dlg.GetTopY() + 40, 200, 256);
+    tb.set_focused(true);
     dlg.AddElement(tb);
-    if (dlg.ShowDialog() == nui::NDialog::DialogResultOK) return local_strdup(tb.GetText());
-    return nullptr;
+
+    Keyboard kbd(theme);
+    kbd.set_visible(true);
+
+    while (true) {
+        nrender::fill_rect(20, dlg.GetTopY(), 300, 528, 0xEF7D);
+        tb.render();
+        kbd.draw();
+        LCD_Refresh();
+
+        struct Input_Event ev;
+        if (GetInput(&ev, 0xFFFFFFFF, 0x10) == 0) {
+            if (ev.type == EVENT_TOUCH) {
+                if (ev.data.touch_single.p1_y >= kbd.get_y()) {
+                    const char* res = kbd.update();
+                    if (res) tb.AppendChar(res[0]);
+                } else {
+                    tb.handle_touch(ev.data.touch_single.p1_x, ev.data.touch_single.p1_y, (int)ev.data.touch_single.direction);
+                }
+            }
+            if (ev.type == EVENT_KEY) {
+                if (ev.data.key.keyCode == KEYCODE_EXE) return local_strdup(tb.GetText());
+                if (ev.data.key.keyCode == KEYCODE_POWER_CLEAR || ev.data.key.keyCode == KEYCODE_POWER) return nullptr;
+                if (ev.data.key.keyCode == KEYCODE_BACKSPACE) tb.Backspace();
+            }
+        }
+    }
 }
 
 int pick(const char** options, size_t count, const char* prompt, const char* theme_name) {

@@ -24,13 +24,26 @@ void NButton::handle_touch(int tx, int ty, int action) {
     } else if (action == TOUCH_UP) m_pressed = false;
 }
 
-NTextBox::NTextBox(int x, int y, int w, int maxLen) : m_x(x), m_y(y), m_w(w), m_maxLen(maxLen) { m_buffer[0] = '\0'; (void)m_maxLen; }
+NTextBox::NTextBox(int x, int y, int w, int maxLen) : m_x(x), m_y(y), m_w(w), m_maxLen(maxLen), m_focused(false) { m_buffer[0] = '\0'; (void)m_maxLen; }
 void NTextBox::render() {
-    nrender::fill_rect(m_x, m_y, m_x + m_w, m_y + 25, 0xFFFF);
+    uint16_t bg = m_focused ? 0xAF7D : 0xFFFF;
+    nrender::fill_rect(m_x, m_y, m_x + m_w, m_y + 25, bg);
     nrender::draw_text(m_x + 5, m_y + 5, m_buffer, 0, nrender::pSystemFont1);
 }
-void NTextBox::handle_touch(int tx, int ty, int action) { (void)tx; (void)ty; (void)action; }
+void NTextBox::handle_touch(int tx, int ty, int action) {
+    if (tx >= m_x && tx < m_x + m_w && ty >= m_y && ty < m_y + 25) {
+        if (action == TOUCH_DOWN) m_focused = true;
+    }
+}
 void NTextBox::SetText(const char* text) { if(text) String_Strcpy(m_buffer, text); }
+void NTextBox::AppendChar(char c) {
+    unsigned int len = String_Strlen(m_buffer);
+    if (len < 255) { m_buffer[len] = c; m_buffer[len+1] = '\0'; }
+}
+void NTextBox::Backspace() {
+    unsigned int len = String_Strlen(m_buffer);
+    if (len > 0) m_buffer[len-1] = '\0';
+}
 
 NDialog::NDialog(Height h, const char* title) : m_title(title), m_count(0) {
     (void)m_title;
@@ -49,7 +62,8 @@ NDialog::Result NDialog::ShowDialog() {
         for(int i=0; i<m_count; i++) m_elements[i]->render();
         LCD_Refresh();
         struct Input_Event ev;
-        if (GetInput(&ev, 0xFFFFFFFF, 0x10) == 0) {
+        Mem_Memset(&ev, 0, sizeof(ev));
+        if (GetInput(&ev, 0, 0x10) == 0) {
             if (ev.type == EVENT_TOUCH) {
                 int tx = ev.data.touch_single.p1_x;
                 int ty = ev.data.touch_single.p1_y;

@@ -50,10 +50,15 @@ public:
     ElementType get_type() const override { return TYPE_TEXTBOX; }
     const char* GetText() const { return m_buffer; }
     void SetText(const char* text);
+    void AppendChar(char c);
+    void Backspace();
+    bool is_focused() const { return m_focused; }
+    void set_focused(bool f) { m_focused = f; }
 private:
     int m_x, m_y, m_w;
     char m_buffer[256];
     int m_maxLen;
+    bool m_focused;
 };
 
 class NDialog {
