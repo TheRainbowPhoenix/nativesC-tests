@@ -1,12 +1,49 @@
-# Build files
-/build*/
-/*.g1a
-/*.g3a
-/*.hh3
+```
+# Documentation build artifacts
+gint-docs/_build/
+gint-docs/build/
+gint-docs/.doctrees/
+gint-docs/_static/
+gint-docs/_templates/
 
-# Python bytecode
+# Common documentation ignores
+docs/_build/
+doc/_build/
+*.rst~
+*.md~
+
+# General build artifacts
+build/
+dist/
+*.o
+*.obj
+*.pyc
 __pycache__/
 
-# Common IDE files
-*.sublime-project
-*.sublime-workspace
+# Dependencies
+node_modules/
+.venv/
+venv/
+.env
+.env.local
+*.env.*
+
+# Editor/IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.tmp
+
+# Logs
+*.log
+
+# Coverage
+.coverage
+coverage/
+htmlcov/
+
+# OS files
+.DS_Store
+Thumbs.db
+```
