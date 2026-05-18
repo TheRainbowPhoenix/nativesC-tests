@@ -2,90 +2,69 @@
 
 JustUI.jwidget-API: API for subclassed widget types
 
-
 ## Functions
-
 
 ### `j_register_widget`
 
 Register a new widget type This function returns a new widget type ID to pass to jwidget_init() when creating widgets of the custom type. Returns -1 if registration fails. The polymorphic structure must outlive all widgets of the custom type.
 
-
 ```c
 int j_register_widget(jwidget_poly *poly);
 ```
 
-
 ---
-
 
 ### `j_register_event`
 
 Register a new event type This function returns a new ID to set in the (type) field of jevent objects. The ID is unique, and can be trusted to be always valid (unless you register more than 64k events in which case you asked for the trouble).
 
-
 ```c
 int j_register_event(void);
 ```
 
-
 ---
-
 
 ### `jwidget_init`
 
 Initialize a widget This function should be called in the constructor for the subclassed widget type, preferably as soon as possible. It initializes common widget attributes, sets the widget type, and declares the parent. A subclassed widget type must have a jwidget as a first member (so that the address of any instance of the subclassed widget is a valid pointer to jwidget), and that jwidget must be initialized with jwidget_init(). @w       Widget to initialize @type    Type ID, as returned by j_register_widget() @parent  Parent, same as in jwidget_create()
 
-
 ```c
 void jwidget_init(jwidget *w, int type, void *parent);
 ```
 
-
 ---
-
 
 ### `jwidget_msize`
 
 Compute and apply the natural size of a widget's margin-box This function computes the widget's natural margin-box size. It determines the natural content size with the csize() function of either the layout or the widget type, then adds the geometry. The margin-box size is stored in the (w) and (h) attributes of the widget. This function should only be called during the first phase of the layout, to implement subclassed csize() functions. Usually, the parent will implement a customn csize() function by combining the position and msize() of its children.
 
-
 ```c
 void jwidget_msize(void *w);
 ```
 
-
 ---
-
 
 ### `jwidget_emit`
 
 Emit an upwards event from this widget This function walks up the tree until it finds a jscene that can store the event. If there is no jscene in the tree, the event is ignored. The (source) field can be omitted and will be set to the widget's address by default.
 
-
 ```c
 void jwidget_emit(void *w, jevent e);
 ```
 
-
 ---
-
 
 ### `jwidget_event`
 
 Send a downwards event to a widget This function calls the polymorphic event function of the targeted widget to notify it of the specified event.
 
-
 ```c
 bool jwidget_event(void *w, jevent e);
 ```
 
-
 ---
 
-
 ## Data Structures
-
 
 ### `jwidget_poly`
 
@@ -182,7 +161,6 @@ typedef void jwidget_poly_destroy_t(void *w);
 
 /* jwidget_poly: Polymorphic interface for a widget type
 
-
 **Fields**:
 
 - `/* Type name, used for display and inheritance */
@@ -200,7 +178,6 @@ typedef void jwidget_poly_destroy_t(void *w);
 
 - `jwidget_poly_destroy_t *destroy`
 
-
 ```c
 struct jwidget_poly {
 /* Type name, used for display and inheritance */
@@ -215,89 +192,70 @@ struct jwidget_poly {
 };
 ```
 
-
 ---
 
-
 ## Macros
-
 
 ### `J_DEFINE_WIDGET`
 
 the widget creation function.
 
-
 ```c
 #define J_DEFINE_WIDGET(NAME, ...) \
 ```
 
-
 ---
 
-
 ### `J_DEFINE_WIDGET_POLY`
-
 
 ```c
 #define J_DEFINE_WIDGET_POLY(NAME, METHOD) \
 ```
 
-
 ---
 
-
 ### `J_DEFINE_WIDGET_POLY_PROTO`
-
 
 ```c
 #define J_DEFINE_WIDGET_POLY_PROTO(NAME, METHOD) \
 ```
 
-
 ---
-
 
 ### `J_DEFINE_EVENTS`
 
 ```
 
-
 ```c
 #define J_DEFINE_EVENTS(...) \
 ```
 
-
 ---
 
-
 ### `J_DEFINE_EVENTS_NAME2`
-
 
 ```c
 #define J_DEFINE_EVENTS_NAME2(COUNTER) _j_init_##COUNTER
 ```
 
-
 ---
 
-
 ### `J_DEFINE_EVENTS_NAME`
-
 
 ```c
 #define J_DEFINE_EVENTS_NAME(COUNTER) J_DEFINE_EVENTS_NAME2(COUNTER)
 ```
 
-
 ---
 
-
 ### `J_DEFINE_EVENTS_INIT`
-
 
 ```c
 #define J_DEFINE_EVENTS_INIT(EVENT) EVENT = j_register_event();
 ```
 
-
 ---
+
+## Implementation
+
+Implementation is in the gint source tree.

@@ -2,103 +2,79 @@
 
 gint:drivers - General tools for drivers
 
-
 ## Functions
-
 
 ### `gint_world_alloc`
 
 Current flags for all drivers
 
-
 ```c
 gint_world_t gint_world_alloc(void);
 ```
 
-
 ---
-
 
 ### `gint_world_alloc`
 
 Number of drivers in the (gint_drivers) array
 
-
 ```c
 gint_world_t gint_world_alloc(void);
 ```
 
-
 ---
-
 
 ### `gint_world_alloc`
 
 Allocate a new world buffer (single block), returns NULL on error
 
-
 ```c
 gint_world_t gint_world_alloc(void);
 ```
 
-
 ---
-
 
 ### `gint_world_free`
 
 Free a world buffer
 
-
 ```c
 void gint_world_free(gint_world_t world);
 ```
 
-
 ---
-
 
 ### `gint_world_switch_in`
 
 The world buffers of gint and the OS
 
-
 ```c
 void gint_world_switch_in(gint_world_t world_os, gint_world_t world_addin);
 ```
 
-
 ---
-
 
 ### `gint_world_switch_in`
 
 Switch from the OS world to a gint-managed world
 
-
 ```c
 void gint_world_switch_in(gint_world_t world_os, gint_world_t world_addin);
 ```
 
-
 ---
-
 
 ### `gint_world_switch_out`
 
 Switch from a gint-managed world to the OS world
 
-
 ```c
 void gint_world_switch_out(gint_world_t world_addin, gint_world_t world_os);
 ```
 
-
 ---
 
-
 ## Data Structures
-
 
 ### `gint_driver_t`
 
@@ -257,7 +233,6 @@ Device drivers and driver cycles
      INTC drivers are not shared so interrupts will not be available in a
      foreign world.
 
-
 **Fields**:
 
 - `/* Driver name */
@@ -301,7 +276,6 @@ Device drivers and driver cycles
 
 - `/* Initial flags */
 	uint8_t flags`
-
 
 ```c
 struct gint_driver_t {
@@ -355,34 +329,39 @@ struct gint_driver_t {
 };
 ```
 
-
 ---
 
-
 ## Macros
-
 
 ### `GINT_DECLARE_DRIVER`
 
 level lower than 10, you must add a leading 0.
 
-
 ```c
 #define GINT_DECLARE_DRIVER(level, name) \
 ```
 
-
 ---
-
 
 ### `gint_driver_count`
 
 Number of drivers in the (gint_drivers) array
 
-
 ```c
 #define gint_driver_count() \
 ```
 
-
 ---
+
+## Implementation
+
+Source files:
+
+- [src/dma/dma.c](https://github.com/ClasspadDev/gint/blob/dev/src/dma/dma.c)
+- [src/rtc/rtc.c](https://github.com/ClasspadDev/gint/blob/dev/src/rtc/rtc.c)
+- [src/r61524/r61524.c](https://github.com/ClasspadDev/gint/blob/dev/src/r61524/r61524.c)
+- [src/kernel/kernel.c](https://github.com/ClasspadDev/gint/blob/dev/src/kernel/kernel.c)
+- [src/kernel/start.c](https://github.com/ClasspadDev/gint/blob/dev/src/kernel/start.c)
+- [src/kernel/world.c](https://github.com/ClasspadDev/gint/blob/dev/src/kernel/world.c)
+- [src/usb/usb.c](https://github.com/ClasspadDev/gint/blob/dev/src/usb/usb.c)
+- [src/intc/intc.c](https://github.com/ClasspadDev/gint/blob/dev/src/intc/intc.c)

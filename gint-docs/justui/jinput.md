@@ -2,90 +2,69 @@
 
 JustUI.jinput: One-line input field
 
-
 ## Functions
-
 
 ### `*jinput_create`
 
 Type IDs
 
-
 ```c
 jinput *jinput_create(char const *prompt, size_t length, void *parent);
 ```
 
-
 ---
-
 
 ### `*jinput_create`
 
 Create an input field The input field is disabled until it receives focus from its scene. The edited text is initially empty and is allocated when needed. The length specifies the maximum amount of bytes in the input.
 
-
 ```c
 jinput *jinput_create(char const *prompt, size_t length, void *parent);
 ```
 
-
 ---
-
 
 ### `jinput_set_text_color`
 
 Trivial properties
 
-
 ```c
 void jinput_set_text_color(jinput *input, int color);
 ```
 
-
 ---
-
 
 ### `jinput_set_keymap_function`
 
 Set a custom keymap function. The keymap function is called when a key is pressed that should produce input in the field. The following parameters are provided: * key is the code for the pressed key (<gint/keycodes.h>) * shift and alpha indicate the state of modifiers The function should return a Unicode code point. Note that jinput can deal with any Unicode code point but the font used for the jinput might not!
 
-
 ```c
 void jinput_set_keymap_function(jinput *input, jinput_keymap_function_t *kf);
 ```
 
-
 ---
-
 
 ### `jinput_clear`
 
 Current value visible in the widget, normally useful upon receiving the JINPUT_VALIDATED event, not guaranteed otherwise
 
-
 ```c
 void jinput_clear(jinput *input);
 ```
 
-
 ---
-
 
 ### `jinput_clear`
 
 Clear current text
 
-
 ```c
 void jinput_clear(jinput *input);
 ```
 
-
 ---
 
-
 ## Data Structures
-
 
 ### `jinput`
 
@@ -122,7 +101,6 @@ typedef uint32_t jinput_keymap_function_t(int key, bool shift, bool alpha);
    * JINPUT_VALIDATED when EXE is pressed during edition
    * JINPUT_CANCELED when EXIT is pressed during edition
 
-
 **Fields**:
 
 - `jwidget widget`
@@ -155,7 +133,6 @@ typedef uint32_t jinput_keymap_function_t(int key, bool shift, bool alpha);
 - `/* Custom keymap function (may be NULL) */
 	jinput_keymap_function_t *keymap_fun`
 
-
 ```c
 struct jinput {
 jwidget widget;
@@ -185,5 +162,8 @@ jwidget widget;
 };
 ```
 
-
 ---
+
+## Implementation
+
+Implementation is in the gint source tree.

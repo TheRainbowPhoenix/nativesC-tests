@@ -1,52 +1,49 @@
 ```
-# Documentation build outputs
+# Documentation build artifacts
 gint-docs/_build/
+gint-docs/build/
+gint-docs/.doctrees/
 gint-docs/_static/
 gint-docs/_templates/
 
-# Generated documentation files
-gint-docs/**/*.html
-gint-docs/**/*.css
-gint-docs/**/*.js
-gint-docs/**/*.pdf
-gint-docs/**/*.epub
+# Common documentation ignores
+docs/_build/
+doc/_build/
+*.rst~
+*.md~
 
-# Python build artifacts (if any Python docs generation)
+# General build artifacts
+build/
+dist/
+*.o
+*.obj
 *.pyc
 __pycache__/
-*.pyo
-*.pyd
 
-# Temporary files
-*.tmp
-*.temp
-*~
-
-# Logs
-*.log
-
-# IDE files
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Environment files
+# Dependencies
+node_modules/
+.venv/
+venv/
 .env
 .env.local
 *.env.*
 
-# Coverage reports
+# Editor/IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.tmp
+
+# Logs
+*.log
+
+# Coverage
+.coverage
 coverage/
 htmlcov/
-.coverage
 
-# Distribution artifacts
-dist/
-build/
-*.egg-info/
-
-# System files
+# OS files
 .DS_Store
 Thumbs.db
 ```

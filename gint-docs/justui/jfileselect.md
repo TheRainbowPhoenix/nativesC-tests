@@ -2,103 +2,79 @@
 
 JustUI.jfileselect: Basic file selector
 
-
 ## Functions
-
 
 ### `*jfileselect_create`
 
 Event IDs
 
-
 ```c
 jfileselect *jfileselect_create(void *parent);
 ```
 
-
 ---
-
 
 ### `*jfileselect_create`
 
 Create a file selection interface There is no initial folder. The widget will not handle any events nor emit any events in this state; a path must first be set before use.
 
-
 ```c
 jfileselect *jfileselect_create(void *parent);
 ```
 
-
 ---
-
 
 ### `jfileselect_set_saveas`
 
 Select whether a "Save as" option is presented If true, the browser will show a "<Create a new file here>" entry in every directory. The result of jfileselect_selected_file(), in this case, might be a file that does not yet exist.
 
-
 ```c
 void jfileselect_set_saveas(jfileselect *fs, bool save_as);
 ```
 
-
 ---
-
 
 ### `jfileselect_browse`
 
 Browse a folder This function loads the specified folder and allows the user to select a file. (Remember to give the widget focus.) A JFILESELECT_LOADED event is emitted immediately, and further events are emitted based on user inputs. This function resets the selected file to NULL. Returns true on success, false if the path does not exist or cannot be browsed (in that case, check errno).
 
-
 ```c
 bool jfileselect_browse(jfileselect *fs, char const *path);
 ```
 
-
 ---
-
 
 ### `jfileselect_default_filter`
 
 Set a filter function The function is called on each directory entry read when scanning a folder. It should return true to show the entry, false to ignore it. By default, jfileselect_default_filter is used. Note filters in general should really accept folders.
 
-
 ```c
 bool jfileselect_default_filter(struct dirent const *entry);
 ```
 
-
 ---
-
 
 ### `jfileselect_default_filter`
 
 Default filter. Rejects "@MainMem", "SAVE-F", "." and "..".
 
-
 ```c
 bool jfileselect_default_filter(struct dirent const *entry);
 ```
 
-
 ---
-
 
 ### `jfileselect_set_font`
 
 Trivial properties
 
-
 ```c
 void jfileselect_set_font(jfileselect *fs, font_t const *font);
 ```
 
-
 ---
 
-
 ## Data Structures
-
 
 ### `jfileselect`
 
@@ -112,7 +88,6 @@ jfileselect: Basic file selector
    * JFILESELECT_LOADED when a folder is loaded into the view
    * JFILESELECT_VALIDATED when a file has been selected
    * JFILESELECT_CANCELED when if the user exits from the top-level folder
-
 
 **Fields**:
 
@@ -171,7 +146,6 @@ jfileselect: Basic file selector
 - `/* Rendering font */
     font_t const *font`
 
-
 ```c
 struct jfileselect {
 jwidget widget;
@@ -216,5 +190,8 @@ jwidget widget;
 };
 ```
 
-
 ---
+
+## Implementation
+
+Implementation is in the gint source tree.

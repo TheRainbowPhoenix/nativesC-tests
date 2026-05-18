@@ -6,21 +6,17 @@ gint:drivers:states - State structures for drivers
 // debugging purposes. This is not part of the gint API, and there is *no
 // stability guarantee* across minor and patch versions of gint.
 
-
 ## Data Structures
-
 
 ### `cpg_state_t`
 
 Clock Pulse Generator (see cpg/cpg.c)
-
 
 **Fields**:
 
 - `uint32_t SSCGCR`
 
 - `struct cpg_overclock_setting speed`
-
 
 ```c
 struct cpg_state_t {
@@ -29,14 +25,11 @@ uint32_t SSCGCR;
 };
 ```
 
-
 ---
-
 
 ### `cpu_state_t`
 
 CPU (see cpu/cpu.c)
-
 
 **Fields**:
 
@@ -48,7 +41,6 @@ CPU (see cpu/cpu.c)
 
 - `uint32_t rN_bank[8]`
 
-
 ```c
 struct cpu_state_t {
 uint32_t SR;
@@ -58,21 +50,17 @@ uint32_t SR;
 };
 ```
 
-
 ---
-
 
 ### `dma_state_t`
 
 Direct Memory Access controller (see dma/dma.c)
-
 
 **Fields**:
 
 - `sh7305_dma_channel_t ch[6]`
 
 - `uint16_t OR`
-
 
 ```c
 struct dma_state_t {
@@ -81,21 +69,17 @@ sh7305_dma_channel_t ch[6];
 };
 ```
 
-
 ---
-
 
 ### `intc_state_t`
 
 Interrupt Controller (see intc/intc.c)
-
 
 **Fields**:
 
 - `uint16_t IPR[12]`
 
 - `uint8_t MSK[13]`
-
 
 ```c
 struct intc_state_t {
@@ -104,21 +88,17 @@ uint16_t IPR[12];
 };
 ```
 
-
 ---
-
 
 ### `mmu_state_t`
 
 Memory Manager Unit (see mmu/mmu.c)
-
 
 **Fields**:
 
 - `uint32_t PASCR`
 
 - `uint32_t IRMCR`
-
 
 ```c
 struct mmu_state_t {
@@ -127,20 +107,16 @@ uint32_t PASCR;
 };
 ```
 
-
 ---
-
 
 ### `r61524_state_t`
 
 R61524 display (see r61524/r61524.c)
 
-
 **Fields**:
 
 - `/* Graphics RAM range */
 	uint16_t HSA, HEA, VSA, VEA`
-
 
 ```c
 struct r61524_state_t {
@@ -149,19 +125,15 @@ struct r61524_state_t {
 };
 ```
 
-
 ---
-
 
 ### `rtc_state_t`
 
 Real-time Clock (see rtc/rtc.c)
 
-
 **Fields**:
 
 - `uint8_t RCR1, RCR2`
-
 
 ```c
 struct rtc_state_t {
@@ -169,21 +141,17 @@ uint8_t RCR1, RCR2;
 };
 ```
 
-
 ---
-
 
 ### `spu_state_t`
 
 Sound Processing Unit (see spu/spu.c)
-
 
 **Fields**:
 
 - `uint32_t PBANKC0, PBANKC1`
 
 - `uint32_t XBANKC0, XBANKC1`
-
 
 ```c
 struct spu_state_t {
@@ -192,21 +160,17 @@ uint32_t PBANKC0, PBANKC1;
 };
 ```
 
-
 ---
-
 
 ### `t6k11_state_t`
 
 T6K11 display (see t6k11/t6k11.c)
-
 
 **Fields**:
 
 - `/* Some status bits, obtained by using the STRD command. There are other
 	   parameters that cannot be read */
 	uint8_t STRD`
-
 
 ```c
 struct t6k11_state_t {
@@ -216,9 +180,7 @@ struct t6k11_state_t {
 };
 ```
 
-
 ---
-
 
 ### `usb_state_t`
 
@@ -236,7 +198,6 @@ typedef struct {
 } tmu_state_t;
 
 /* USB 2.0 function module (see usb/usb.c)
-
 
 **Fields**:
 
@@ -267,7 +228,6 @@ typedef struct {
 - `/* Ignored: UPONCR, PIPEnMAXP, PIPEnPERI, PIPEnTRN, PIPEnTRE, DEVADDn */
 #endif`
 
-
 ```c
 struct usb_state_t {
 /* Control and power-up. We don't save power-related registers from other
@@ -291,8 +251,19 @@ struct usb_state_t {
 };
 ```
 
-
 ---
 
-
 ## Macros
+
+## Implementation
+
+Source files:
+
+- [src/dma/dma.c](https://github.com/ClasspadDev/gint/blob/dev/src/dma/dma.c)
+- [src/rtc/rtc.c](https://github.com/ClasspadDev/gint/blob/dev/src/rtc/rtc.c)
+- [src/r61524/r61524.c](https://github.com/ClasspadDev/gint/blob/dev/src/r61524/r61524.c)
+- [src/usb/usb.c](https://github.com/ClasspadDev/gint/blob/dev/src/usb/usb.c)
+- [src/intc/intc.c](https://github.com/ClasspadDev/gint/blob/dev/src/intc/intc.c)
+- [src/tmu/tmu.c](https://github.com/ClasspadDev/gint/blob/dev/src/tmu/tmu.c)
+- [src/cpg/cpg.c](https://github.com/ClasspadDev/gint/blob/dev/src/cpg/cpg.c)
+- [src/cpu/cpu.c](https://github.com/ClasspadDev/gint/blob/dev/src/cpu/cpu.c)

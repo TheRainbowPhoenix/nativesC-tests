@@ -2,90 +2,69 @@
 
 JustUI.jlist: List widget with arbitrary, selectable children
 
-
 ## Functions
-
 
 ### `jlist_update_model`
 
 Create a new (empty) jlist.
 
-
 ```c
 void jlist_update_model(jlist *l, int item_count, void *user);
 ```
 
-
 ---
-
 
 ### `jlist_update_model`
 
 Update jlists's information about the model The new model size is passed as parameter. The model is refreshed by repeatedly calling the info function. The user pointer is also updated. To keep it unchanged, pass `l->user` as third parameter.
 
-
 ```c
 void jlist_update_model(jlist *l, int item_count, void *user);
 ```
 
-
 ---
-
 
 ### `jlist_clear`
 
 Remove all items
 
-
 ```c
 void jlist_clear(jlist *l);
 ```
 
-
 ---
-
 
 ### `jlist_select`
 
 Move selection to a selectable item
 
-
 ```c
 void jlist_select(jlist *l, int item);
 ```
 
-
 ---
-
 
 ### `jlist_selected_item`
 
 Get currently selected item (-1 if none)
 
-
 ```c
 int jlist_selected_item(jlist *l);
 ```
 
-
 ---
-
 
 ### `jlist_selected_region`
 
 Get the currently selected region of the widget The region is returned as a jrect within the widget's coordinates. This is useful when the list is inside a frame, to scroll the frame to a suitable position after the list's selection moved. See jscrolledlist. The returned region is undefined if there is no selected item.
 
-
 ```c
 jrect jlist_selected_region(jlist *l);
 ```
 
-
 ---
 
-
 ## Data Structures
-
 
 ### `jlist`
 
@@ -145,7 +124,6 @@ typedef void (*jlist_item_paint_function)(int x, int y, int w, int h,
    no spacing. Generally it is desirable to put it in a jframe to make it
    scroll; otherwise, it has rather unpredictable dimensions.
 
-
 **Fields**:
 
 - `jwidget widget`
@@ -170,7 +148,6 @@ typedef void (*jlist_item_paint_function)(int x, int y, int w, int h,
 - `/* User data pointer */
     void *user`
 
-
 ```c
 struct jlist {
 jwidget widget;
@@ -192,5 +169,8 @@ jwidget widget;
 };
 ```
 
-
 ---
+
+## Implementation
+
+Implementation is in the gint source tree.

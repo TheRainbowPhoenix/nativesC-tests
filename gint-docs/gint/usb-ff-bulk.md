@@ -24,129 +24,99 @@ gint:usb-ff-bulk - A bulk-based transfer class using the fxlink protocol
 //    automatically handle commands and respond to them as long as the message
 //    handling function is called regularly.
 
-
 ## Functions
-
 
 ### `usb_fxlink_text`
 
 Send raw text Send a string; fxlink will display it in the terminal. This can be used to back stdout/stderr. Sending lots of small messages can be slow; if that's a problem, fill in message manually. If size is 0, uses strlen(text).
 
-
 ```c
 void usb_fxlink_text(char const *text, int size);
 ```
 
-
 ---
-
 
 ### `usb_fxlink_screenshot`
 
 Take a screenshot This function sends a copy of the VRAM to fxlink. This is best used just before dupdate() since this ensures the image sent by USB is identical to the one displayed on screen. If `onscreen` is set and there are two VRAMs (on fx-CG or when using the gray engine on fx-9860G), sends a copy of the other VRAM. This is a bit more intuitive when taking a screenshot of the last shown image as a result of a key press. Note that this function never reads pixels directly from the display (it's usually slow and currently not even implemented).
 
-
 ```c
 void usb_fxlink_screenshot(bool onscreen);
 ```
 
-
 ---
-
 
 ### `usb_fxlink_videocapture`
 
 Send a frame for a video recording This function is essentially the same as usb_fxlink_screenshot(). It sends a capture of the VRAM to fxlink but uses the "video" type, which fxlink displays in real-time or saves as a video file. The meaning of the onscreen setting is identical to usb_fxlink_screenshot(). This function can be called with onscreen=false as a dupdate() hook to automatically send new frames to fxlink.
 
-
 ```c
 void usb_fxlink_videocapture(bool onscreen);
 ```
 
-
 ---
-
 
 ### `usb_fxlink_screenshot_gray`
 
 Similar to usb_fxlink_screenshot(), but takes a gray screenshot if the gray engine is currently running.
 
-
 ```c
 void usb_fxlink_screenshot_gray(bool onscreen);
 ```
 
-
 ---
-
 
 ### `usb_fxlink_videocapture_gray`
 
 Like usb_fxlink_videocapture(), but uses VRAM data from the gray engine.
 
-
 ```c
 void usb_fxlink_videocapture_gray(bool onscreen);
 ```
 
-
 ---
-
 
 ### `usb_fxlink_handle_messages`
 
 Process and return incoming messages This function processes incoming messages. It handles some types of messages internally (eg. fxlink commands) and returns the others to the caller by loading the provided header structure and returning true. When this function returns true, the caller should read the message contents on the interface's input pipe. Usually every read will return just a portion of the message (eg. 2048 bytes) so the contents should be read with a loop. As long as this function returns true it should be called againt to process any other messages. When there is no more messages to process, this function returns false. It is important to call this function regularly from the main thread when quick responses are expected.
 
-
 ```c
 bool usb_fxlink_handle_messages(struct usb_fxlink_header *header);
 ```
 
-
 ---
-
 
 ### `usb_fxlink_drop_transaction`
 
 Drop incoming data until end of transaction When a message arrives on the USB port incoming data *must* be processed in order for the pipe to accept any further data in the future. This function can be used in error situations to drop data until the end of the transaction (which is usually the end of the message, at least with the fxSDK's implementation of fxlink).
 
-
 ```c
 void usb_fxlink_drop_transaction(void);
 ```
 
-
 ---
-
 
 ### `usb_ff_bulk_output`
 
 Pipe number for calculator -> host communication
 
-
 ```c
 int usb_ff_bulk_output(void);
 ```
 
-
 ---
-
 
 ### `usb_ff_bulk_input`
 
 Pipe number for host -> calculator communication
 
-
 ```c
 int usb_ff_bulk_input(void);
 ```
 
-
 ---
 
-
 ## Data Structures
-
 
 ### `usb_fxlink_header_t`
 
@@ -273,7 +243,6 @@ int usb_ff_bulk_input(void);
    restriction might be lifted in the future. As with the rest of the USB
    protocol, all the integer are encoded as *little-endian*.
 
-
 **Fields**:
 
 - `/* Protocol version = 0x00000100 */
@@ -290,7 +259,6 @@ int usb_ff_bulk_input(void);
 
 - `char type[16]`
 
-
 ```c
 struct usb_fxlink_header_t {
 /* Protocol version = 0x00000100 */
@@ -305,9 +273,7 @@ struct usb_fxlink_header_t {
 };
 ```
 
-
 ---
-
 
 ### `usb_fxlink_image_t`
 
@@ -321,7 +287,6 @@ bool usb_fxlink_fill_header(usb_fxlink_header_t *header,
 
 /* Subheader for the fxlink built-in "image" type
 
-
 **Fields**:
 
 - `/* Image size`
@@ -334,7 +299,6 @@ bool usb_fxlink_fill_header(usb_fxlink_header_t *header,
 - `/* Pixel format, see below */
 	int pixel_format`
 
-
 ```c
 struct usb_fxlink_image_t {
 /* Image size; storage is row-major */
@@ -345,8 +309,14 @@ struct usb_fxlink_image_t {
 };
 ```
 
-
 ---
 
-
 ## Macros
+
+## Implementation
+
+Source files:
+
+- [src/gdb/gdb.c](https://github.com/ClasspadDev/gint/blob/dev/src/gdb/gdb.c)
+- [src/usb/classes/ff-bulk-gray.c](https://github.com/ClasspadDev/gint/blob/dev/src/usb/classes/ff-bulk-gray.c)
+- [src/usb/classes/ff-bulk.c](https://github.com/ClasspadDev/gint/blob/dev/src/usb/classes/ff-bulk.c)

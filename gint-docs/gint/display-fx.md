@@ -6,9 +6,7 @@ gint:display-fx - fx9860g drawing functions
 //	has its own functions, but often relies on this module (because the
 //	gray effect is created through two monochrome buffers).
 
-
 ## Data Structures
-
 
 ### `color_t`
 
@@ -39,7 +37,6 @@ extern uint32_t *gint_vram;
    Not all colors can be used with all functions. To avoid ambiguities, all
    functions explicitly indicate compatible colors.
 
-
 **Fields**:
 
 - `/* Opaque colors */
@@ -55,7 +52,6 @@ extern uint32_t *gint_vram;
 	/* Gray operators */
 	C_LIGHTEN  = 6,
 	C_DARKEN   = 7,`
-
 
 ```c
 enum color_t {
@@ -75,32 +71,28 @@ enum color_t {
 };
 ```
 
-
 ---
 
-
 ## Macros
-
 
 ### `DWIDTH`
 
 Dimensions of the VRAM
 
-
 ```c
 #define DWIDTH 128
 ```
 
-
 ---
 
-
 ### `DHEIGHT`
-
 
 ```c
 #define DHEIGHT 64
 ```
 
-
 ---
+
+## Implementation
+
+Implementation is in the gint source tree.

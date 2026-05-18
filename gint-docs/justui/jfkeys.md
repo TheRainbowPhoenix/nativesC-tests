@@ -2,116 +2,89 @@
 
 JustUI.jfkeys: Row of function keys
 
-
 ## Functions
-
 
 ### `jfkeys_set2`
 
 Create a set of function keys Both the image and text specification are provided; one of them should generally be NULL (if both are non-NULL, the image takes precedence). For historical reasons the name fkeys_create() is a one-argument version with either the text or image depending on the platform.
 
-
 ```c
 void jfkeys_set2(jfkeys *keys, bopti_image_t const *img, char const *labels);
 ```
 
-
 ---
-
 
 ### `jfkeys_set2`
 
 Replace the definition of function keys This will also reset the level to 0.
 
-
 ```c
 void jfkeys_set2(jfkeys *keys, bopti_image_t const *img, char const *labels);
 ```
 
-
 ---
-
 
 ### `jfkeys_level`
 
 Return the current function key level
 
-
 ```c
 int jfkeys_level(jfkeys *keys);
 ```
 
-
 ---
-
 
 ### `jfkeys_set_level`
 
 Set the function key level
 
-
 ```c
 void jfkeys_set_level(jfkeys *keys, int level);
 ```
 
-
 ---
-
 
 ### `jfkeys_set_override`
 
 The following functions are available only on fx-CG 50 and are no-ops on fx-9860G (you can't generate a good image for a tiny key).
 
-
 ```c
 void jfkeys_set_override(jfkeys *keys, int key, char const *override);
 ```
 
-
 ---
-
 
 ### `jfkeys_set_override`
 
 Get the override for a key
 
-
 ```c
 void jfkeys_set_override(jfkeys *keys, int key, char const *override);
 ```
 
-
 ---
-
 
 ### `jfkeys_set_override`
 
 Override the value of a single key on all levels This functions sets the override on the specified key, which replaces the label for that key on all levels. This is useful to conditionally show functions.
 
-
 ```c
 void jfkeys_set_override(jfkeys *keys, int key, char const *override);
 ```
 
-
 ---
-
 
 ### `jfkeys_set_font`
 
 Change the key and text colors * bg is the background color for MENU, ENTRY and ACTION keys (default C_BLACK), and the border color for SPECIAL keys. * bg_special is the background color for SPECIAL keys (default C_WHITE). * text is the text color for MENU, ENTRY and ACTION keys (default C_WHITE). * text_special is the text color for SPECIAL keys (default C_BLACK).
 
-
 ```c
 void jfkeys_set_font(jfkeys *keys, font_t const *font);
 ```
 
-
 ---
 
-
 ## Data Structures
-
 
 ### `jfkeys`
 
@@ -161,7 +134,6 @@ jfkeys: Functions keys indicating functions for the F1..F6 keys
    events instead. However, in general jfkeys doesn't have keyboard focus, so
    you have to give the events manually.
 
-
 **Fields**:
 
 - `jwidget widget`
@@ -186,7 +158,6 @@ jfkeys: Functions keys indicating functions for the F1..F6 keys
 
 - `font_t const *font`
 
-
 ```c
 struct jfkeys {
 jwidget widget;
@@ -208,5 +179,8 @@ jwidget widget;
 };
 ```
 
-
 ---
+
+## Implementation
+
+Implementation is in the gint source tree.

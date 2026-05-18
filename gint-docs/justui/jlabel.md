@@ -2,116 +2,89 @@
 
 JustUI.jlabel: Simple one-line or multi-line text label without formatting
 
-
 ## Functions
-
 
 ### `*jlabel_create`
 
 Create a label with a fixed text Initially the label has the supplied string as text (which must outlive the widget). If you want dynamic text, you can provide an empty string and use jlabel_printf() later.
 
-
 ```c
 jlabel *jlabel_create(char const *text, void *parent);
 ```
 
-
 ---
-
 
 ### `jlabel_set_text`
 
 Set a fixed string This function sets the label text to a fixed string. This is the same as in jlabel_create(). The string is not copied, it must outlive the label. This is the most useful when the provided string is a literal.
 
-
 ```c
 void jlabel_set_text(jlabel *l, char const *text);
 ```
 
-
 ---
-
 
 ### `jlabel_asprintf`
 
 Generate and set a formatted string This function generates the label string with printf-formatting. The resulting string is created with malloc() and owned by the label; it is destroyed when the text is replaced of the label is destroyed. Because of how asprintf() works, the string is generated twice. Returns the number of characters printed.
 
-
 ```c
 int jlabel_asprintf(jlabel *l, char const *format, ...);
 ```
 
-
 ---
-
 
 ### `jlabel_snprintf`
 
 Generate and set a formatted string Similar to jlabel_asprintf(), but an upper bound on the length of the result string has to be provided. This avoids generating the string twice. Return the number of characters printed.
 
-
 ```c
 int jlabel_snprintf(jlabel *l, size_t size, char const *format, ...);
 ```
 
-
 ---
-
 
 ### `jlabel_set_block_alignment`
 
 Get the current string
 
-
 ```c
 void jlabel_set_block_alignment(jlabel *l, jalign horz, jalign vert);
 ```
 
-
 ---
-
 
 ### `jlabel_set_block_alignment`
 
 Set block and text alignment, individually
 
-
 ```c
 void jlabel_set_block_alignment(jlabel *l, jalign horz, jalign vert);
 ```
 
-
 ---
-
 
 ### `jlabel_set_alignment`
 
 Set both horizontal alignments at the same time (most natural)
 
-
 ```c
 void jlabel_set_alignment(jlabel *l, jalign horizontal_align);
 ```
 
-
 ---
-
 
 ### `jlabel_set_line_spacing`
 
 Trivial properties
 
-
 ```c
 void jlabel_set_line_spacing(jlabel *l, int line_spacing);
 ```
 
-
 ---
 
-
 ## Data Structures
-
 
 ### `jlabel`
 
@@ -163,7 +136,6 @@ typedef enum jwrapmode {
    fonts as <gint/display.h>. If the font is set to NULL, gint's default font
    is used. The background color for the whole widget is handled by jwidget.
 
-
 **Fields**:
 
 - `jwidget widget`
@@ -210,7 +182,6 @@ typedef enum jwrapmode {
 
 - `font_t const *font`
 
-
 ```c
 struct jlabel {
 jwidget widget;
@@ -247,5 +218,8 @@ jwidget widget;
 };
 ```
 
-
 ---
+
+## Implementation
+
+Implementation is in the gint source tree.

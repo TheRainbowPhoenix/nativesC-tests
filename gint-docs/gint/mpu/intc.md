@@ -9,8 +9,15 @@ gint:mpu:intc - Interrupt Controller
 //	gint's API provides higher-level and platform-agnostic interrupt
 //	management. This is probably what you are looking for.
 
-
 ## Data Structures
 
-
 ## Macros
+
+## Implementation
+
+Source files:
+
+- [src/dma/dma.c](https://github.com/ClasspadDev/gint/blob/dev/src/dma/dma.c)
+- [src/kernel/kernel.c](https://github.com/ClasspadDev/gint/blob/dev/src/kernel/kernel.c)
+- [src/intc/intc.c](https://github.com/ClasspadDev/gint/blob/dev/src/intc/intc.c)
+- [src/touch/i2c.c](https://github.com/ClasspadDev/gint/blob/dev/src/touch/i2c.c)

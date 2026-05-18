@@ -2,9 +2,7 @@
 
 JustUI.jscrolledlist: A jlist inside a jframe
 
-
 ## Data Structures
-
 
 ### `jscrolledlist`
 
@@ -18,7 +16,6 @@ jscrolledlist: A jlist inside a jframe
    functions, and instead returns the list and frame as its `->list` and
    `->frame` members.
 
-
 **Fields**:
 
 - `jwidget widget`
@@ -26,7 +23,6 @@ jscrolledlist: A jlist inside a jframe
 - `jframe *frame`
 
 - `jlist *list`
-
 
 ```c
 struct jscrolledlist {
@@ -36,5 +32,8 @@ jwidget widget;
 };
 ```
 
-
 ---
+
+## Implementation
+
+Implementation is in the gint source tree.

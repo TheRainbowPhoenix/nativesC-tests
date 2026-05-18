@@ -2,9 +2,7 @@
 
 JustUI.jpainted: Widget defined by just a size and painting function
 
-
 ## Data Structures
-
 
 ### `jpainted`
 
@@ -47,7 +45,6 @@ jpainted: Simple widget designed to integrate low-effort rendering
    The layout and rendering will be performed automatically, allowing the GUI
    to benefit from automated positioning with virtually no overhead.
 
-
 **Fields**:
 
 - `jwidget widget`
@@ -62,7 +59,6 @@ jpainted: Simple widget designed to integrate low-effort rendering
 
 - `int16_t natural_h`
 
-
 ```c
 struct jpainted {
 jwidget widget;
@@ -75,5 +71,8 @@ jwidget widget;
 };
 ```
 
-
 ---
+
+## Implementation
+
+Implementation is in the gint source tree.

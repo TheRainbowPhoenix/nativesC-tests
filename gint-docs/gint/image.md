@@ -27,298 +27,229 @@ gint:image - Image manipulation and rendering
 // functions because the dense bit packing is both impractical and slower for
 // these applications.
 
-
 ## Functions
-
 
 ### `*image_alloc`
 
 Create a new (uninitialized) image This function allocates a new image of the specified dimensions and format. It always allocates a new data array; if you need to reuse a data array, use the lower-level image_create() or image_create_sub(). The first parameters [width] and [height] specify the dimensions of the new image in pixels. The [format] should be one of the IMAGE_* formats, for example IMAGE_RGB565A or IMAGE_P4_RGB565. This function does not specify or initialize the palette of the new image; use image_set_palette(), image_alloc_palette() or image_copy_palette() after calling this function. The returned image structure must be freed with image_free() after use. @width         Width of the new image @height        Height of the new image @format        Pixel format; one of the IMAGE_* formats defined above
 
-
 ```c
 image_t *image_alloc(int width, int height, int format);
 ```
 
-
 ---
-
 
 ### `image_set_palette`
 
 Specify an external palette for an image This function sets the image's palette to the provided address. The number of entries allocated must be specified in size. It is also the caller's responsibility to ensure that the palette covers all the indices used in the image data. The old palette, if owned by the image, is freed. If [owns=true] the palette's ownership is given to the image, otherwise it is kept external.
 
-
 ```c
 void image_set_palette(image_t *img, uint16_t *palette, int size, bool owns);
 ```
 
-
 ---
-
 
 ### `image_alloc_palette`
 
 Allocate a new palette for an image This function allocates a new palette for an image. The number of entries is specified in size; for P8 it can vary between 1 and 256, for P4 it is ignored (P4 images always have 16 colors). The old palette, if owned by the image, is freed. The entries of the new palette are all initialized to 0. If size is -1, the format's default palette size is used. Returns true on success.
 
-
 ```c
 bool image_alloc_palette(image_t *img, int size);
 ```
 
-
 ---
-
 
 ### `image_copy_palette`
 
 Copy another image's palette This function allocates a new palette for an image, and initializes it with a copy of another image's palette. For P8 the palette can be resized by specifying a value other than -1 as the size; by default, the source image's palette size is used (within the limits of the new format). Retuns true on success.
 
-
 ```c
 bool image_copy_palette(image_t const *src, image_t *dst, int size);
 ```
 
-
 ---
-
 
 ### `*image_create`
 
 Create a bare image with no data/palette This function allocates a new image structure but without data or palette. The [data] and [palette] members are NULL, [color_count] and [stride] are 0. This function is useful to create images that reuse externally-provided information. It is intended that the user of this function sets the [data] and [stride] fields themselves, along with the IMAGE_FLAGS_DATA_ALLOC flag if the image should own its data. The [palette] and [color_count] members can be set with image_set_palette(), image_alloc_palette(), image_copy_palette(), or manually. The returned image structure must be freed with image_free() after use.
 
-
 ```c
 image_t *image_create(int width, int height, int format);
 ```
 
-
 ---
-
 
 ### `*image_create_vram`
 
 Create a reference to gint_vram This function creates a new RGB565 image that references gint_vram. Using this image as target for transformation functions can effectively render transformed images to VRAM. The value of gint_vram is captured when this function is called, and does not update after dupdate() when triple-buffering is used. The user should account for this option. (Using this function twice then replacing one of the [data] pointers is allowed.) The VRAM image owns no data but it does own its own structure so it must still be freed with image_free() after use.
 
-
 ```c
 image_t *image_create_vram(void);
 ```
 
-
 ---
-
 
 ### `image_free`
 
 Free and image and the data it owns This function frees the provided image structure and the data that it owns. Images converted by fxconv should not be freed; nonetheless, this functions distinguishes them and should work. Images are not expected to be created on the stack. If the image has the IMAGE_FLAGS_DATA_ALLOC flag, the data pointer is also freed. Similarly, the image has the IMAGE_FLAGS_PALETTE_ALLOC flag, the palette is freed. Make sure to not free images when references to them still exist, as this could cause the reference's pointers to become dangling.
 
-
 ```c
 void image_free(image_t *img);
 ```
 
-
 ---
-
 
 ### `image_valid`
 
 Check if an image is valid An image is considered valid if it has a valid profile, a non-NULL data pointer, and for palette formats a valid palette pointer.
 
-
 ```c
 bool image_valid(image_t const *img);
 ```
 
-
 ---
-
 
 ### `image_alpha`
 
 Get the alpha value for an image format This function returns the alpha value for any specific image format: * RGB16: 0x0001 * P8: -128 (0x80) * P4: 0 For non-transparent formats, it returns a value that is different from all valid pixel values of the format, which means it is always safe to compare a pixel value to the image_alpha() of the format.
 
-
 ```c
 int image_alpha(int format);
 ```
 
-
 ---
-
 
 ### `image_get_pixel`
 
 Read a pixel from the data array This function reads a pixel from the image's data array at position (x,y). It returns the pixel's value, which is either a full-color value (RGB16) or a possibly-negative palette index (P8/P4). See the description of the [data] field of image_t for more details. The value of the pixel can be decoded into a 16-bit color either manually or by using the image_decode_pixel() function. Note that reading large amounts of image data with this function will be slow; if you need reasonable performance, consider iterating on the data array manually.
 
-
 ```c
 int image_get_pixel(image_t const *img, int x, int y);
 ```
 
-
 ---
-
 
 ### `image_decode_pixel`
 
 Decode a pixel value This function decodes a pixel's value obtained from the data array (for instance with image_get_pixel()). For RGB16 formats this does nothing, but for palette formats this accesses the palette at a suitable position. Note that reading large amounts of data with this function will be slow; if you need reasonable performance, consider inlining the format-specific method or iterating on the data array manually.
 
-
 ```c
 int image_decode_pixel(image_t const *img, int pixel);
 ```
 
-
 ---
-
 
 ### `image_data_size`
 
 Compute the size of the [data] array This function returns the size of the data array, in bytes. This can be used to duplicate it. Note that for sub-images this is a subsection of another image's data array, and might be much larger than the sub-image.
 
-
 ```c
 int image_data_size(image_t const *img);
 ```
 
-
 ---
-
 
 ### `image_set_pixel`
 
 Set a pixel in the data array This function writes a pixel into the image's data array at position (x,y). The pixel value must be of the proper format, as specified in the definition of the [data] field of image_t. Formats: RGB16, P8, P4
 
-
 ```c
 void image_set_pixel(image_t const *img, int x, int y, int value);
 ```
 
-
 ---
-
 
 ### `image_copy`
 
 Convert and copy an image This function copies an image into another image while converting certain formats. Unlike transforms, this function does clip, so there are no conditions on the size of the target. If [copy_alpha] is true, transparent pixels are copied verbatim, which effectively replaces the top-left corner of [dst] with [src]. If it's false, transparent pixels of [src] are skipped, effectively rendering [src] over the top-left corner of [src]. This function converts between all formats except from RGB16 to P8/P4, since this requires generating a palette (which is a complex endeavour). Conversions from P8/P4 to RGB16 simply decode the palette. Conversions between P8/P4 preserve the contents but renumber the palette entries. From P4 to P8, the image is always preserved. From P8 to P4, the image is only preserved if it has less than 16 colors (this is intended to allow P4 images to be converted to P8 for edition by this library, and then back to P4). The following table summarizes the conversions: Source format →      RGB16           P8                P4 Target format ↓  +-----------+----------------+------------------+ RGB16  |    Copy     Decode palette    Decode palette  | P8  |     -            Copy        Enlarge palette  | P4  |     -       Narrow palette         Copy       | +-----------+----------------+------------------+ Note that conversions to RGB16 are not lossless because RGB565, P8 and P4 can represent any color; if a color equal to image_alpha(IMAGE_RGB565A) is found during conversion, this function transforms it slightly to look similar instead of erroneously generating a transparent pixel. Formats: RGB16 → RGB16, P8 → Anything, P4 → Anything Size requirement: none (clipping is performed) Supports in-place: No (useless)
 
-
 ```c
 void image_copy(image_t const *src, image_t *dst, bool copy_alpha);
 ```
 
-
 ---
-
 
 ### `*image_copy_alloc`
 
 Convert and copy into a new image This function is similar to image_copy(), but it allocates a target image of the desired format before copying.
 
-
 ```c
 image_t *image_copy_alloc(image_t const *src, int new_format);
 ```
 
-
 ---
-
 
 ### `image_fill`
 
 Fill an image with a single pixel value
 
-
 ```c
 void image_fill(image_t *img, int value);
 ```
 
-
 ---
-
 
 ### `image_clear`
 
 Fill a transparent image with its transparent value
 
-
 ```c
 void image_clear(image_t *img);
 ```
 
-
 ---
-
 
 ### `image_hflip`
 
 Flip horizontally Formats: RGB16, P8 Size requirement: destination at least as large as source (no clipping) Supports in-place: Yes
 
-
 ```c
 void image_hflip(image_t const *src, image_t *dst, bool copy_alpha);
 ```
 
-
 ---
-
 
 ### `image_vflip`
 
 Flip vertically Formats: RGB16, P8 Size requirement: destination at least as large as source (no clipping) Supports in-place: Yes
 
-
 ```c
 void image_vflip(image_t const *src, image_t *dst, bool copy_alpha);
 ```
 
-
 ---
-
 
 ### `*gint_image_rgb16_loop`
 
 Prepare a rendering command with dynamic effects This function crafts an image renderer command. It loads all the settings except for effect-dependent parameters: the [.loop] label, the color section of [.effect], and color effect settings. See the effect-specific functions to see how they are defined. The benefit of this approach is that the rendering code does not need to be linked in unless an effect is actually used, which avoids blowing up the size of the add-in as the number of support dynamic effects increases. @box         Requested on-screen box (will be clipped depending on effects) @img         Source image @effects     Set of dynamic effects to be applied, as an [IMAGE_*] bitmask @left_edge   Whether to force 2-alignment on the input (box->left) @right_edge  Whether to force 2-alignment on the width @cmd         Command to be filled @window      Rendering window (usually {0, 0, DWIDTH, DHEIGHT}) Returns false if there is nothing to render because of clipping (in which case [cmd] is unchanged), true otherwise. [*box] is also updated to reflect the final box after clipping but not accounting for edges.
 
-
 ```c
 void *gint_image_rgb16_loop(int output_width, struct gint_image_cmd *cmd);
 ```
 
-
 ---
-
 
 ### `*gint_image_rgb16_loop`
 
 Entry point of the renderers. These functions can be called normally as long as you can build the commands (eg. by using gint_image_mkcmd() then filling the effect-specific information).
 
-
 ```c
 void *gint_image_rgb16_loop(int output_width, struct gint_image_cmd *cmd);
 ```
 
-
 ---
-
 
 ### `gint_image_rgb16_normal`
 
 Renderer fragments. The following can absolutely not be called from C code as they aren't full functions (and this isn't their prototype). These are continuations to be specified in the [.loop] field of a command before using one of the functions above.
 
-
 ```c
 void gint_image_rgb16_normal(void);
 ```
 
-
 ---
 
-
 ## Data Structures
-
 
 ### `image_linear_map`
 
@@ -643,7 +574,6 @@ image_t *image_vflip_alloc(image_t const *src);
    Size requirement: none (clipping is performed)
    Supports in-place: No
 
-
 **Fields**:
 
 - `/* Dimensions of the source and destination */
@@ -664,7 +594,6 @@ image_t *image_vflip_alloc(image_t const *src);
        All of these values are specified as 16:16 fixed-point, ie. they encode
        decimal values by multiplying them by 65536. */
     int u, v, dx_u, dx_v, dy_u, dy_v`
-
 
 ```c
 struct image_linear_map {
@@ -688,9 +617,7 @@ struct image_linear_map {
 };
 ```
 
-
 ---
-
 
 ### `gint_image_box`
 
@@ -824,7 +751,6 @@ DIMAGE_SIG1(p4_clearbg_alt, int effects, int bg_index)
 
 /* Double box specifying both a source and target area
 
-
 **Fields**:
 
 - `/* Target location of top-left corner */
@@ -835,7 +761,6 @@ DIMAGE_SIG1(p4_clearbg_alt, int effects, int bg_index)
 
 - `/* Source bounding box (low included, high excluded) */
     int left, top`
-
 
 ```c
 struct gint_image_box {
@@ -848,9 +773,7 @@ struct gint_image_box {
 };
 ```
 
-
 ---
-
 
 ### `gint_image_cmd`
 
@@ -883,7 +806,6 @@ void gint_image_clip_output(struct gint_image_box *b,
    members, along with the return values of the gint_image_FORMAT_loop()
    functions, are used to update the command if one needs to draw *parts* of
    the image and resume the rendering later. This is used in Azur.
-
 
 **Fields**:
 
@@ -941,7 +863,6 @@ void gint_image_clip_output(struct gint_image_box *b,
 - `/* Local x position (for updates between fragments) */
     int16_t x`
 
-
 ```c
 struct gint_image_cmd {
 /* Shader ID. This is used in Azur, and ignored in gint */
@@ -991,266 +912,211 @@ struct gint_image_cmd {
 };
 ```
 
-
 ---
 
-
 ## Macros
-
 
 ### `IMAGE_IS_RGB16`
 
 Quick macros to compare formats by storage size
 
-
 ```c
 #define IMAGE_IS_RGB16(format) \
 ```
 
-
 ---
 
-
 ### `IMAGE_IS_P8`
-
 
 ```c
 #define IMAGE_IS_P8(format) \
 ```
 
-
 ---
 
-
 ### `IMAGE_IS_P4`
-
 
 ```c
 #define IMAGE_IS_P4(format) \
 ```
 
-
 ---
-
 
 ### `IMAGE_IS_ALPHA`
 
 Check whether image format has an alpha color
 
-
 ```c
 #define IMAGE_IS_ALPHA(format) \
 ```
 
-
 ---
-
 
 ### `IMAGE_IS_INDEXED`
 
 Check whether image format uses a palette
 
-
 ```c
 #define IMAGE_IS_INDEXED(format) \
 ```
 
-
 ---
-
 
 ### `image_sub1`
 
 Make the last parameter optional
 
-
 ```c
 #define image_sub1(src, x, y, w, h, dst, ...) image_sub(src, x, y, w, h, dst)
 ```
 
-
 ---
 
-
 ### `image_sub`
-
 
 ```c
 #define image_sub(...) image_sub1(__VA_ARGS__, NULL)
 ```
 
-
 ---
-
 
 ### `image_at`
 
 image_at(): Build a reference to a position within a sub-image
 
-
 ```c
 #define image_at(img, x, y) image_sub(img, x, y, -1, -1)
 ```
 
-
 ---
-
 
 ### `dimage_effect`
 
 dimage_effect(): Generalized dimage() supporting dynamic effects
 
-
 ```c
 #define dimage_effect(x, y, img, eff, ...) \
 ```
 
-
 ---
-
 
 ### `DIMAGE_SIG1`
 
 Specific versions for each format
 
-
 ```c
 #define DIMAGE_SIG1(NAME, ...) \
 ```
 
-
 ---
 
-
 ### `DIMAGE_SIG`
-
 
 ```c
 #define DIMAGE_SIG(NAME, ...) \
 ```
 
-
 ---
 
-
 ### `dimage_rgb16_effect`
-
 
 ```c
 #define dimage_rgb16_effect(x, y, img, eff, ...) \
 ```
 
-
 ---
 
-
 ### `dimage_p8_effect`
-
 
 ```c
 #define dimage_p8_effect(x, y, img, eff, ...) \
 ```
 
-
 ---
 
-
 ### `dimage_p4_effect`
-
 
 ```c
 #define dimage_p4_effect(x, y, img, eff, ...) \
 ```
 
-
 ---
 
-
 ### `image_target`
-
 
 ```c
 #define image_target(src, dst, ...) \
 ```
 
-
 ---
 
-
 ### `image_target_arg1`
-
 
 ```c
 #define image_target_arg1(c, ...) \
 ```
 
-
 ---
 
-
 ### `image_target_arg2`
-
 
 ```c
 #define image_target_arg2(c, ...) \
 ```
 
-
 ---
 
-
 ### `image_target_arg3`
-
 
 ```c
 #define image_target_arg3(c, ...) \
 ```
 
-
 ---
 
-
 ### `image_target_arg4`
-
 
 ```c
 #define image_target_arg4(c, ...) \
 ```
 
-
 ---
 
-
 ### `image_target_arg5`
-
 
 ```c
 #define image_target_arg5(c, ...) \
 ```
 
-
 ---
 
-
 ### `image_target_arg6`
-
 
 ```c
 #define image_target_arg6(c, ...) \
 ```
 
-
 ---
-
 
 ### `image_alpha_2`
 
 image_alpha_2(): Conditional alpha
 
-
 ```c
 #define image_alpha_2(fmt, copy_alpha) \
 ```
 
-
 ---
+
+## Implementation
+
+Source files:
+
+- [src/r61524/r61524.c](https://github.com/ClasspadDev/gint/blob/dev/src/r61524/r61524.c)
+- [src/render-cg/dvram.c](https://github.com/ClasspadDev/gint/blob/dev/src/render-cg/dvram.c)
+- [src/image/image_get_pixel.c](https://github.com/ClasspadDev/gint/blob/dev/src/image/image_get_pixel.c)
+- [src/image/image_rotate_around_scale.c](https://github.com/ClasspadDev/gint/blob/dev/src/image/image_rotate_around_scale.c)
+- [src/image/image_linear.c](https://github.com/ClasspadDev/gint/blob/dev/src/image/image_linear.c)
+- [src/image/image_vflip_alloc.c](https://github.com/ClasspadDev/gint/blob/dev/src/image/image_vflip_alloc.c)
+- [src/image/image_copy_alloc.c](https://github.com/ClasspadDev/gint/blob/dev/src/image/image_copy_alloc.c)
+- [src/image/image_create_vram.c](https://github.com/ClasspadDev/gint/blob/dev/src/image/image_create_vram.c)
