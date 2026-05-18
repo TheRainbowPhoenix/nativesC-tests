@@ -1,12 +1,52 @@
-# Build files
-/build*/
-/*.g1a
-/*.g3a
-/*.hh3
+```
+# Documentation build outputs
+gint-docs/_build/
+gint-docs/_static/
+gint-docs/_templates/
 
-# Python bytecode
+# Generated documentation files
+gint-docs/**/*.html
+gint-docs/**/*.css
+gint-docs/**/*.js
+gint-docs/**/*.pdf
+gint-docs/**/*.epub
+
+# Python build artifacts (if any Python docs generation)
+*.pyc
 __pycache__/
+*.pyo
+*.pyd
 
-# Common IDE files
-*.sublime-project
-*.sublime-workspace
+# Temporary files
+*.tmp
+*.temp
+*~
+
+# Logs
+*.log
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment files
+.env
+.env.local
+*.env.*
+
+# Coverage reports
+coverage/
+htmlcov/
+.coverage
+
+# Distribution artifacts
+dist/
+build/
+*.egg-info/
+
+# System files
+.DS_Store
+Thumbs.db
+```
